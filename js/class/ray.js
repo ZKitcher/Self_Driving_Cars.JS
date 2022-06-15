@@ -9,7 +9,7 @@ class Ray {
 
         this.dir = p5.Vector.fromAngle(heading === 0 ? 0.00000000001 : heading).mult(20);
 
-        this.render();
+        //this.render();
     }
 
     cast(wall) {
@@ -78,8 +78,6 @@ class Ray {
 
         if (closest) {
             line(this.position.x, this.position.y, closest.x, closest.y)
-        } else {
-            line(this.position.x, this.position.y, this.dir.x * 10, this.dir.y * 10)
         }
 
         pop()

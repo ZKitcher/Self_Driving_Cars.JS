@@ -8,6 +8,8 @@ class Population {
         this.mutationRate = mutationRate;
         this.constructor = constructor;
 
+        this.bestAgent = null
+
         for (let i = 0; i < this.popSize; i++) {
             this.agents.push(new this.constructor())
         }
@@ -24,35 +26,46 @@ class Population {
 
     evaluate() {
         let maxFitness = 0;
+        let minFitness = Infinity;
         let bestAgent;
+        this.matingPool = [];
 
         this.agents.forEach(e => {
             if (e.fitness > maxFitness) {
                 maxFitness = e.fitness;
                 bestAgent = e;
             }
+
+            if (e.fitness < minFitness) minFitness = e.fitness;
         })
 
-        this.agents.forEach(e => e.fitness /= maxFitness);
-        this.selection(bestAgent)
-    }
-
-    selection(best) {
-        let newPopulation = [];
-        this.matingPool = [];
-
-        if (best.completed && typeof completedGeneration !== 'undefined') {
-            completedGeneration(best)
-        }
 
         this.agents.forEach(e => {
+            e.fitness = ((e.fitness - minFitness) / (maxFitness - minFitness)) * 10;
+
             // let n = e.completed || e === best ? e.fitness * 10 : e.fitness * 5
-            let n = e.completed ? e.fitness * 20 : e.fitness
+            let n = e.completed || e === bestAgent ? e.fitness * 2 : e.fitness
+            // let n = e.completed ? e.fitness * 5 : e.fitness
 
             for (let i = 0; i < n; i++) {
                 this.matingPool.push(e);
             }
+
         });
+
+        this.bestAgent = bestAgent
+
+        console.log(this.matingPool)
+
+        this.selection()
+    }
+
+    selection() {
+        let newPopulation = [];
+
+        if (this.bestAgent?.completed && typeof completedGeneration !== 'undefined') {
+            completedGeneration(this.bestAgent)
+        }
 
         this.agents.forEach(e => {
             let newBrain = NeuralNetwork
@@ -63,7 +76,7 @@ class Population {
             newBrain.mutateRandom(newBrain.learningRate, this.mutationRate);
 
             let nextGen = new this.constructor(newBrain);
-            if (e === best) nextGen.bestGenes = true;
+            if (e === this.bestAgent) nextGen.bestGenes = true;
             newPopulation.push(nextGen);
         });
 
@@ -88,6 +101,10 @@ class Population {
         push();
         fill(255, 255, 255);
         text(this.generation, 10, 15);
+
+        if (this.bestAgent)
+            // this.bestAgent.brain.show()
+
         pop();
     }
 }
@@ -103,8 +120,10 @@ class MLObject {
             return;
         }
         this.failed = false;
-        this.completed = false;
-        this.fitness;
+        this.success = false;
+        this.done = false;
         this.bestGenes = false;
+        this.fitness;
+        this.prediction;
     }
 }

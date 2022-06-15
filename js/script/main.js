@@ -10,17 +10,19 @@
 // nn.log();
 
 let cars;
-
 let racetrack;
-
 let walls = [];
+let target;
+
+const timerCount = 30
+
+let timer = timerCount
 
 function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
-
-    cars = new Car() //Population(Car, 100);
-
     racetrack = new RaceTrack();
+    target = new Target(width - 150, height - 120)
+    cars = new Population(Car, 100, 0.4);
 }
 
 function draw() {
@@ -29,37 +31,46 @@ function draw() {
     pop()
 
     run()
-
-
-
-
+    text(timer, width - 20, 15);
 
 }
 
 const run = () => {
     cars.run();
     racetrack.run();
-    //walls.forEach(e => e.run())
+    target.run();
+
+    if (frameCount % 60 == 0 && timer > 0) {
+        timer--;
+    }
+
+    if (timer == 0) {
+        cars.evaluate()
+        timer = timerCount
+    }
 }
 
 function keyPressed() {
-
-
+    if (key === 'r') {
+        cars.evaluate()
+        timer = timerCount
+    }
 }
 
 function mouseClicked() {
-    //racetrack.updateMap(mouseX, mouseY)
+    racetrack.updateMap(mouseX, mouseY)
 }
 
 // const completedGeneration = () => {
 //     target = new Target()
 // }
 
-// const createMLObjectBrain = () => {
-//     let nn = new NeuralNetwork(1, 1);
-//     nn.addHiddenLayer(12, 'tanH');
-//     nn.addHiddenLayer(6, 'tanH');
-//     nn.makeWeights();
+const createMLObjectBrain = () => {
+    let nn = new NeuralNetwork(7, 2);
+    nn.addHiddenLayer(12, 'tanH');
+    nn.addHiddenLayer(6, 'tanH');
+    nn.addHiddenLayer(3, 'tanH');
+    nn.makeWeights();
 
-//     return nn;
-// }
+    return nn;
+}

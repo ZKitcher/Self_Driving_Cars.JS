@@ -16,7 +16,7 @@ const urlTree = [
             'ray',
             'boundary',
             'raceTrack',
-            'motion',
+            'target',
             'car',
         ]
     },

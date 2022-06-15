@@ -42,13 +42,13 @@ const LayerType = {
 // { Number } Stride The number of jumps the sample is going to perform for each iteration.
 
 class Layer {
-    constructor(type, size, arg2, arg3, arg4, arg5) {
+    constructor(type, size, activationFunc, arg3, arg4, arg5) {
         this.type = type;
         this.subtype = this.getSubtype();
         if (this.subtype !== LayerType.pool) {
             if (this.type === LayerType.hidden || this.type === LayerType.output) {
                 this.size = size;
-                this.setFunc(arg2);
+                this.setFunc(activationFunc);
                 this.layer = new Matrix(this.size, 1);
             } else if (this.type === LayerType.input) {
                 this.size = size;
@@ -57,7 +57,7 @@ class Layer {
         } else if (this.subtype === LayerType.pool) {
             // Pooling Layers
             this.stride = arg3;
-            this.sampleSize = arg2;
+            this.sampleSize = activationFunc;
             this.inputSize = size;
 
             if (arg4 !== undefined && arg5 !== undefined) {
@@ -105,7 +105,6 @@ class Layer {
                 return output;
             };
         } else {
-            // Handle Unvalid Layer types.
             if (typeof this.type === 'string') {
                 NetworkError.error(`The Layer type '${this.type}' is not valid.`, 'Layer.constructor');
             } else {
@@ -511,7 +510,7 @@ class NeuralNetwork {
                 NetworkError.error(`Dataset missing (.input) property.`, 'NeuralNetwork.train');
                 return;
             }
-            if (!e.target) {
+            if (!e.target === undefined) {
                 NetworkError.error(`Dataset missing (.target) property.`, 'NeuralNetwork.train');
                 return;
             }
@@ -722,6 +721,55 @@ class NeuralNetwork {
         return model
     };
 
+
+    // P5js visualisation
+
+    show(scaler = 1, x = width, y = 20) {
+        let xPointer = x;
+        let yPointer = y;
+        let maxHeight = 0;
+
+        this.Layers.forEach(e => maxHeight = e.size > maxHeight ? e.size : maxHeight)
+
+        maxHeight *= (30 * scaler);
+
+        let neurons = [];
+
+        for (let i = this.Layers.length - 1; i > -1; i--) {
+            xPointer = xPointer - (75 * scaler);
+            yPointer = y;
+            let pointLayer = []
+            let layer = this.Layers[i]
+            let increment = maxHeight / (layer.size + 1)
+
+            for (let j = 0; j < layer.size; j++) {
+                pointLayer.push(createVector(xPointer, yPointer + increment))
+                yPointer += increment;
+            }
+            neurons.push(pointLayer)
+        }
+
+        neurons.reverse()
+
+        const weights = this.weights.map(e => e.matrix);
+
+        for (let i = 0; i < neurons.length; i++) {
+            for (let j = 0; j < neurons[i].length; j++) {
+                let n = neurons[i][j]
+                if (i < neurons.length - 1) {
+                    neurons[i + 1].forEach((e, f) => {
+                        push()
+                        let weight = weights[i][f][j]
+                        stroke(weight > 0 ? 255 : 0)
+                        strokeWeight(weight)
+                        line(n.x, n.y, e.x, e.y)
+                        pop()
+                    })
+                }
+                ellipse(n.x, n.y, 6 * scaler, 6 * scaler)
+            }
+        }
+    }
 }
 
 const download = (title, data) => {
