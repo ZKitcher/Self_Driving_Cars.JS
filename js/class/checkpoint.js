@@ -1,4 +1,4 @@
-class Target {
+class Checkpoint {
     constructor(x, y) {
         this.position = createVector(x, y);
     }

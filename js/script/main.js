@@ -21,7 +21,6 @@ let timer = timerCount
 function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
     racetrack = new RaceTrack();
-    target = new Target(width - 150, height - 120)
     cars = new Population(Car, 100, 0.4);
 }
 
@@ -38,7 +37,6 @@ function draw() {
 const run = () => {
     cars.run();
     racetrack.run();
-    target.run();
 
     if (frameCount % 60 == 0 && timer > 0) {
         timer--;
@@ -54,6 +52,9 @@ function keyPressed() {
     if (key === 'r') {
         cars.evaluate()
         timer = timerCount
+    }
+    if (key === 't') {
+        racetrack.addCheckpoint(mouseX, mouseY)
     }
 }
 

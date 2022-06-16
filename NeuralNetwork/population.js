@@ -39,7 +39,6 @@ class Population {
             if (e.fitness < minFitness) minFitness = e.fitness;
         })
 
-
         this.agents.forEach(e => {
             e.fitness = ((e.fitness - minFitness) / (maxFitness - minFitness)) * 10;
 
@@ -54,8 +53,6 @@ class Population {
         });
 
         this.bestAgent = bestAgent
-
-        console.log(this.matingPool)
 
         this.selection()
     }
@@ -105,7 +102,7 @@ class Population {
         if (this.bestAgent)
             // this.bestAgent.brain.show()
 
-        pop();
+            pop();
     }
 }
 

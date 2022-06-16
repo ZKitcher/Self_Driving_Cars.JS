@@ -3,8 +3,8 @@ class Car extends MLObject {
         super(brain);
         this.acceleration = createVector(0, 0);
         this.velocity = createVector(0, 0);
-        this.position = createVector(100, 150);
-        this.maxspeed = 5;
+        this.position = createVector(150, 200);
+        this.maxspeed = 10;
 
         this.currentAccel = 0;
         this.carSteering = 0;
@@ -17,16 +17,20 @@ class Car extends MLObject {
 
         this.siteDistances = []
         this.timeAlive = 0;
+
+        this.laps = 0;
+        this.checkpoint = []
     }
 
     run() {
+        this.checkPointCheck();
         this.update();
         this.render();
     }
 
     update() {
         rectMode(CENTER);
-        
+
         this.sightLines[0].run(this.position, this.velocity.heading() - 1);
         this.sightLines[1].run(this.position, this.velocity.heading() - 0.5);
         this.sightLines[2].run(this.position, this.velocity.heading());
@@ -41,7 +45,13 @@ class Car extends MLObject {
             this.done = true;
             this.fitness /= 1.5;
         }
-        this.fitness = dist(this.position.x, this.position.y, 100, 150) * (this.timeAlive / 2);
+
+        let checkpointMulti = this.checkpoint.length ? this.checkpoint.length * 10 : 1;
+        let lapMulti = this.laps ? this.laps * 15 : 1;
+
+        let spinCheck = dist(this.position.x, this.position.y, 150, 200) < 400 ? 0.1 : 1;
+
+        this.fitness = ((this.timeAlive * checkpointMulti) * lapMulti) * spinCheck;
 
         if (this.failed) return;
 
@@ -70,7 +80,7 @@ class Car extends MLObject {
             cars.carSteering = 0;
         }
 
-        // if (this.currentAccel > 5) this.currentAccel = 5;
+        // if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
         if (this.currentAccel < 0.1) this.currentAccel = 0.1;
 
         if (this.carSteering > 0.02) this.carSteering = 0.02;
@@ -92,13 +102,35 @@ class Car extends MLObject {
             .mult(0);
     }
 
+    checkPointCheck() {
+        let checkpointIndex = this.checkpoint.length;
+        let next = racetrack.checkPoints[checkpointIndex]
+
+        if (!next) return;
+
+        rect(next.x - 50, next.y - 50, 100, 100)
+
+        if (this.position.x > next.position.x - 50 && this.position.y > next.position.y - 50
+            && this.position.x < next.position.x + 50 && this.position.y < next.position.y + 50
+        ) {
+            this.checkpoint.push(checkpointIndex + 1)
+            console.log(`CHECKPOINT ${checkpointIndex + 1}!`, this)
+        }
+
+        if (racetrack.checkPoints.length === this.checkpoint.length) {
+            this.checkpoint = [];
+            this.laps++;
+            console.log('LAP COMPLETED!', this)
+        }
+    }
+
     networkPrediction() {
 
         let inputs = []
 
         inputs = this.siteDistances.map(e => e > 300 ? 1 : (e / 300))
-        inputs.push(this.currentAccel / 5)
-        inputs.push(this.carSteering / 0.2 )
+        inputs.push(this.currentAccel / this.maxspeed)
+        inputs.push(this.carSteering / 0.2)
 
         this.prediction = this.brain.predict(inputs)
 
@@ -156,7 +188,7 @@ class Car extends MLObject {
 
         push();
 
-        
+
         fill(this.bestGenes ? 255 : 127, 127);
         stroke(200);
         translate(this.position.x, this.position.y);
