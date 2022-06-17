@@ -4,14 +4,14 @@ class Car extends MLObject {
         this.acceleration = createVector(0, 0);
         this.velocity = createVector(0, 0);
         this.position = createVector(150, 200);
-        this.maxspeed = 10;
+        this.maxspeed = 20;
 
         this.currentAccel = 0;
         this.carSteering = 0;
 
         this.sightLines = []
 
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 6; i++) {
             this.sightLines.push(new Ray(this.position.x, this.position.y))
         }
 
@@ -29,33 +29,31 @@ class Car extends MLObject {
     }
 
     update() {
-        rectMode(CENTER);
+        
+        if (this.failed) return;
+        this.timeAlive++;
 
         this.sightLines[0].run(this.position, this.velocity.heading() - 1);
         this.sightLines[1].run(this.position, this.velocity.heading() - 0.5);
         this.sightLines[2].run(this.position, this.velocity.heading());
         this.sightLines[3].run(this.position, this.velocity.heading() + 0.5);
         this.sightLines[4].run(this.position, this.velocity.heading() + 1);
-
+        this.sightLines[5].run(this.position, this.velocity.heading() + PI);
 
         this.siteDistances = this.sightLines.map(e => e.getDistance())
+
 
         if (this.siteDistances.filter(e => e < 10).length) {
             this.failed = true;
             this.done = true;
-            this.fitness /= 1.5;
+            this.fitness /= 1.5
         }
 
-        let checkpointMulti = this.checkpoint.length ? this.checkpoint.length * 10 : 1;
-        let lapMulti = this.laps ? this.laps * 15 : 1;
+        this.fitness = ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) //* this.timeAlive;
 
-        let spinCheck = dist(this.position.x, this.position.y, 150, 200) < 400 ? 0.1 : 1;
-
-        this.fitness = ((this.timeAlive * checkpointMulti) * lapMulti) * spinCheck;
-
-        if (this.failed) return;
-
-        this.timeAlive++;
+        if (this.checkpoint.length === 0 && this.laps === 0) {
+            this.fitness = 1//random(3, 8)
+        }
 
         if (keyIsDown(UP_ARROW)) {
             cars.currentAccel += 0.1;
@@ -108,8 +106,6 @@ class Car extends MLObject {
 
         if (!next) return;
 
-        rect(next.x - 50, next.y - 50, 100, 100)
-
         if (this.position.x > next.position.x - 50 && this.position.y > next.position.y - 50
             && this.position.x < next.position.x + 50 && this.position.y < next.position.y + 50
         ) {
@@ -129,6 +125,7 @@ class Car extends MLObject {
         let inputs = []
 
         inputs = this.siteDistances.map(e => e > 300 ? 1 : (e / 300))
+        inputs.pop()
         inputs.push(this.currentAccel / this.maxspeed)
         inputs.push(this.carSteering / 0.2)
 
@@ -187,6 +184,7 @@ class Car extends MLObject {
         //angleMode(RADIANS);
 
         push();
+        rectMode(CENTER);
 
 
         fill(this.bestGenes ? 255 : 127, 127);

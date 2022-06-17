@@ -7,6 +7,8 @@ class Population {
         this.generation = 1;
         this.mutationRate = mutationRate;
         this.constructor = constructor;
+        this.timerCount = 30;
+        this.timer = this.timerCount;
 
         this.bestAgent = null
 
@@ -20,8 +22,21 @@ class Population {
     }
 
     run() {
+        if (frameCount % 60 == 0 && this.timer > 0) {
+            this.timer--;
+        }
+
+        if (this.timer == 0) this.reset()
+
         this.agents.forEach(e => e.run())
+        if (this.agents.filter(e => !e.done).length === 0) this.evaluate()
+
         this.render()
+    }
+
+    reset() {
+        this.evaluate()
+        this.timer = this.timerCount
     }
 
     evaluate() {
@@ -98,6 +113,7 @@ class Population {
         push();
         fill(255, 255, 255);
         text(this.generation, 10, 15);
+        text(this.timer, width - 20, 15);
 
         if (this.bestAgent)
             // this.bestAgent.brain.show()
