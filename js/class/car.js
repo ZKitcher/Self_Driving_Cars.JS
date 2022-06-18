@@ -49,10 +49,10 @@ class Car extends MLObject {
             this.fitness /= 1.5
         }
 
-        this.fitness = ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) //* this.timeAlive;
+        this.fitness = ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * this.timeAlive;
 
         if (this.checkpoint.length === 0 && this.laps === 0) {
-            this.fitness = 1//random(3, 8)
+            this.fitness = random(1, 5)
         }
 
         if (keyIsDown(UP_ARROW)) {
@@ -111,6 +111,7 @@ class Car extends MLObject {
         ) {
             this.checkpoint.push(checkpointIndex + 1)
             console.log(`CHECKPOINT ${checkpointIndex + 1}!`, this)
+            console.log('Multi', ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)))
         }
 
         if (racetrack.checkPoints.length === this.checkpoint.length) {
