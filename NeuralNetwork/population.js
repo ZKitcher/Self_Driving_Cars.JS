@@ -80,12 +80,18 @@ class Population {
         }
 
         this.agents.forEach(e => {
-            let newBrain = NeuralNetwork
-                .mergeNetworks(
-                    random(this.matingPool).brain.copy(),
-                    random(this.matingPool).brain.copy()
-                );
-            newBrain.mutateRandom(newBrain.learningRate, this.mutationRate);
+            let newBrain;
+
+            if (e === this.bestAgent) {
+                newBrain = e.brain.copy()
+            } else {
+                newBrain = NeuralNetwork
+                    .mergeNetworks(
+                        random(this.matingPool).brain.copy(),
+                        random(this.matingPool).brain.copy()
+                    );
+                newBrain.mutateRandom(newBrain.learningRate, this.mutationRate);
+            }
 
             let nextGen = new this.constructor(newBrain);
             if (e === this.bestAgent) nextGen.bestGenes = true;
