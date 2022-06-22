@@ -29,7 +29,7 @@ class Car extends MLObject {
     }
 
     update() {
-        
+
         if (this.failed) return;
         this.timeAlive++;
 
@@ -79,12 +79,11 @@ class Car extends MLObject {
         }
 
         // if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
-        if (this.currentAccel < 0.1) this.currentAccel = 0.1;
+        this.networkPrediction()
 
+        if (this.currentAccel < 0.1) this.currentAccel = 0.1;
         if (this.carSteering > 0.02) this.carSteering = 0.02;
         if (this.carSteering < -0.02) this.carSteering = -0.02;
-
-        this.networkPrediction()
 
         this.applyForce(this.gas(this.velocity.heading()));
         this.setSteering(this.carSteering)
@@ -110,14 +109,12 @@ class Car extends MLObject {
             && this.position.x < next.position.x + 50 && this.position.y < next.position.y + 50
         ) {
             this.checkpoint.push(checkpointIndex + 1)
-            console.log(`CHECKPOINT ${checkpointIndex + 1}!`, this)
-            console.log('Multi', ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)))
         }
 
         if (racetrack.checkPoints.length === this.checkpoint.length) {
             this.checkpoint = [];
             this.laps++;
-            console.log('LAP COMPLETED!', this)
+            console.log('LAP COMPLETED!', this.laps)
         }
     }
 

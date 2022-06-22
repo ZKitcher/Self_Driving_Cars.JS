@@ -35,8 +35,7 @@ const run = () => {
 
 function keyPressed() {
     if (key === 'r') {
-        // cars.evaluate()
-        // timer = timerCount
+        cars.evaluate()
     }
     if (key === 't') {
         racetrack.addCheckpoint(mouseX, mouseY)
