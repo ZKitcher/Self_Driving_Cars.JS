@@ -49,10 +49,15 @@ class Car extends MLObject {
             this.fitness /= 1.5
         }
 
-        this.fitness = ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * this.timeAlive;
-
-        if (this.checkpoint.length === 0 && this.laps === 0) {
-            this.fitness = random(1, 5)
+        if (this.currentAccel < 0.2 || (this.checkpoint.length === 0 && this.laps === 0)) {
+            if (this.fitness > 10) {
+                this.failed = true;
+                this.done = true;
+                this.fitness /= 1.5
+            }
+            this.fitness = random(0, 1);
+        } else {
+            this.fitness = ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * this.timeAlive;
         }
 
         if (keyIsDown(UP_ARROW)) {
@@ -68,10 +73,14 @@ class Car extends MLObject {
         }
 
         if (keyIsDown(LEFT_ARROW)) {
-            cars.carSteering -= 0.05;
+            if (cars.currentAccel > 0) {
+                cars.carSteering -= 0.05;
+            }
         }
         if (keyIsDown(RIGHT_ARROW)) {
-            cars.carSteering += 0.05;
+            if (cars.currentAccel > 0) {
+                cars.carSteering += 0.05;
+            }
         }
 
         if (!keyIsDown(LEFT_ARROW) && !keyIsDown(RIGHT_ARROW)) {
@@ -81,13 +90,18 @@ class Car extends MLObject {
         // if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
         this.networkPrediction()
 
-        if (this.currentAccel < 0.1) this.currentAccel = 0.1;
-        if (this.carSteering > 0.02) this.carSteering = 0.02;
-        if (this.carSteering < -0.02) this.carSteering = -0.02;
+        if (this.currentAccel < 0) {
+            this.currentAccel = 0;
+            this.carSteering = 0;
+        } else if (this.currentAccel > 0.5) {
+            if (this.carSteering > 0.02) this.carSteering = 0.02;
+            if (this.carSteering < -0.02) this.carSteering = -0.02;
+        } else {
+            this.carSteering = 0
+        }
 
         this.applyForce(this.gas(this.velocity.heading()));
         this.setSteering(this.carSteering)
-
         this.velocity
             .add(this.acceleration)
             .limit(this.maxspeed);

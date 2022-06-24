@@ -18,6 +18,8 @@ function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
     racetrack = new RaceTrack();
     cars = new Population(Car, 100, 0.4);
+
+    // cars = new Car()
 }
 
 function draw() {
@@ -35,7 +37,7 @@ const run = () => {
 
 function keyPressed() {
     if (key === 'r') {
-        cars.evaluate()
+        cars.reset()
     }
     if (key === 't') {
         racetrack.addCheckpoint(mouseX, mouseY)
@@ -46,9 +48,9 @@ function mouseClicked() {
     racetrack.updateMap(mouseX, mouseY)
 }
 
-// const completedGeneration = () => {
-//     target = new Target()
-// }
+const completedGeneration = () => {
+    target = new Target()
+}
 
 const createMLObjectBrain = () => {
     let nn = new NeuralNetwork(7, 2);

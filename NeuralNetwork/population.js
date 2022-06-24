@@ -29,7 +29,7 @@ class Population {
         if (this.timer == 0) this.reset()
 
         this.agents.forEach(e => e.run())
-        if (this.agents.filter(e => !e.done).length === 0) this.evaluate()
+        if (this.agents.filter(e => !e.done).length === 0) this.reset()
 
         this.render()
     }
@@ -40,35 +40,29 @@ class Population {
     }
 
     evaluate() {
-        let maxFitness = 0;
-        let minFitness = Infinity;
+        let max = 0;
+        let min = Infinity;
         let bestAgent;
         this.matingPool = [];
 
         this.agents.forEach(e => {
-            if (e.fitness > maxFitness) {
-                maxFitness = e.fitness;
+            if (e.fitness > max) {
+                max = e.fitness;
                 bestAgent = e;
             }
-
-            if (e.fitness < minFitness) minFitness = e.fitness;
+            if (e.fitness < min) min = e.fitness;
         })
 
         this.agents.forEach(e => {
-            e.fitness = ((e.fitness - minFitness) / (maxFitness - minFitness)) * 10;
-
-            // let n = e.completed || e === best ? e.fitness * 10 : e.fitness * 5
+            e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10;
             let n = e.completed || e === bestAgent ? e.fitness * 2 : e.fitness
-            // let n = e.completed ? e.fitness * 5 : e.fitness
 
             for (let i = 0; i < n; i++) {
                 this.matingPool.push(e);
             }
-
         });
-
+        
         this.bestAgent = bestAgent
-
         this.selection()
     }
 
