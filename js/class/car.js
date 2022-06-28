@@ -11,7 +11,7 @@ class Car extends MLObject {
 
         this.sightLines = []
 
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 8; i++) {
             this.sightLines.push(new Ray(this.position.x, this.position.y))
         }
 
@@ -33,31 +33,34 @@ class Car extends MLObject {
         if (this.failed) return;
         this.timeAlive++;
 
-        this.sightLines[0].run(this.position, this.velocity.heading() - 1);
-        this.sightLines[1].run(this.position, this.velocity.heading() - 0.5);
-        this.sightLines[2].run(this.position, this.velocity.heading());
-        this.sightLines[3].run(this.position, this.velocity.heading() + 0.5);
-        this.sightLines[4].run(this.position, this.velocity.heading() + 1);
-        this.sightLines[5].run(this.position, this.velocity.heading() + PI);
+        this.sightLines[0].run(this.position, this.velocity.heading() - 1.5);
+        this.sightLines[1].run(this.position, this.velocity.heading() - 1);
+        this.sightLines[2].run(this.position, this.velocity.heading() - 0.5);
+        this.sightLines[3].run(this.position, this.velocity.heading());
+        this.sightLines[4].run(this.position, this.velocity.heading() + 0.5);
+        this.sightLines[5].run(this.position, this.velocity.heading() + 1);
+        this.sightLines[6].run(this.position, this.velocity.heading() + 1.5);
+        this.sightLines[7].run(this.position, this.velocity.heading() + PI);
 
         this.siteDistances = this.sightLines.map(e => e.getDistance())
-
 
         if (this.siteDistances.filter(e => e < 10).length) {
             this.failed = true;
             this.done = true;
             this.fitness /= 1.5
+            return;
         }
 
-        if (this.currentAccel < 0.2 || (this.checkpoint.length === 0 && this.laps === 0)) {
+        if (this.currentAccel < 0.5 || (this.checkpoint.length === 0 && this.laps === 0)) {
             if (this.fitness > 10) {
                 this.failed = true;
                 this.done = true;
                 this.fitness /= 1.5
+                return;
             }
             this.fitness = random(0, 1);
         } else {
-            this.fitness = ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * this.timeAlive;
+            this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * (1800 - this.timeAlive);
         }
 
         if (keyIsDown(UP_ARROW)) {
@@ -194,6 +197,11 @@ class Car extends MLObject {
 
     render() {
         //angleMode(RADIANS);
+
+        if (this.bestGenes) {
+            text(this.currentAccel, 10, 30)
+            text(this.carSteering, 10, 40)
+        }
 
         push();
         rectMode(CENTER);

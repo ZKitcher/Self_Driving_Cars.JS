@@ -53,15 +53,19 @@ class Population {
             if (e.fitness < min) min = e.fitness;
         })
 
-        this.agents.forEach(e => {
-            e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10;
-            let n = e.completed || e === bestAgent ? e.fitness * 2 : e.fitness
 
-            for (let i = 0; i < n; i++) {
-                this.matingPool.push(e);
+
+        this.agents.sort((a, b) => b.fitness - a.fitness).forEach((e, i) => {
+            if (i < this.popSize / 2) {
+                e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10;
+                let n = e.completed || e === bestAgent ? e.fitness * 2 : e.fitness
+                
+                for (let i = 0; i < n; i++) {
+                    this.matingPool.push(e);
+                }
             }
         });
-        
+
         this.bestAgent = bestAgent
         this.selection()
     }

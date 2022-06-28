@@ -9,7 +9,7 @@ class Ray {
 
         this.dir = p5.Vector.fromAngle(heading === 0 ? 0.00000000001 : heading).mult(20);
 
-        //this.render();
+        // this.render();
     }
 
     cast(wall) {

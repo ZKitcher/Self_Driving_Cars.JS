@@ -53,7 +53,7 @@ const completedGeneration = () => {
 }
 
 const createMLObjectBrain = () => {
-    let nn = new NeuralNetwork(7, 2);
+    let nn = new NeuralNetwork(9, 2);
     nn.addHiddenLayer(12, 'tanH');
     nn.addHiddenLayer(6, 'tanH');
     nn.addHiddenLayer(3, 'tanH');
