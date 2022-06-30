@@ -29,6 +29,7 @@ class Population {
         if (this.timer == 0) this.reset()
 
         this.agents.forEach(e => e.run())
+
         if (this.agents.filter(e => !e.done).length === 0) this.reset()
 
         this.render()
@@ -53,19 +54,20 @@ class Population {
             if (e.fitness < min) min = e.fitness;
         })
 
-
+        console.log(this.agents.map(e => e.fitness))
 
         this.agents.sort((a, b) => b.fitness - a.fitness).forEach((e, i) => {
-            if (i < this.popSize / 2) {
+            if (i < this.popSize * .1) {
                 e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10;
-                let n = e.completed || e === bestAgent ? e.fitness * 2 : e.fitness
-                
+                let n = e.completed || e === bestAgent ? e.fitness *= 2 : e.fitness
+
                 for (let i = 0; i < n; i++) {
                     this.matingPool.push(e);
                 }
             }
         });
 
+        console.log(this.matingPool.sort((a, b) => b.fitness - a.fitness).map(e => e.fitness))
         this.bestAgent = bestAgent
         this.selection()
     }
@@ -83,11 +85,15 @@ class Population {
             if (e === this.bestAgent) {
                 newBrain = e.brain.copy()
             } else {
-                newBrain = NeuralNetwork
-                    .mergeNetworks(
-                        random(this.matingPool).brain.copy(),
-                        random(this.matingPool).brain.copy()
-                    );
+                let coinflip = random(0, 1)
+                newBrain = coinflip > 0.5
+                    ? NeuralNetwork
+                        .mergeNetworks(
+                            random(this.matingPool).brain.copy(),
+                            random(this.matingPool).brain.copy()
+                        )
+                    : random(this.matingPool).brain.copy();
+
                 newBrain.mutateRandom(newBrain.learningRate, this.mutationRate);
             }
 
@@ -140,7 +146,7 @@ class MLObject {
         this.success = false;
         this.done = false;
         this.bestGenes = false;
-        this.fitness;
+        this.fitness = 0;
         this.prediction;
     }
 }

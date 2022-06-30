@@ -20,6 +20,9 @@ class Car extends MLObject {
 
         this.laps = 0;
         this.checkpoint = []
+
+        this.checkpointTimer = 180;
+
     }
 
     run() {
@@ -29,9 +32,9 @@ class Car extends MLObject {
     }
 
     update() {
-
-        if (this.failed) return;
+        if (this.done) return;
         this.timeAlive++;
+        this.checkpointTimer--;
 
         this.sightLines[0].run(this.position, this.velocity.heading() - 1.5);
         this.sightLines[1].run(this.position, this.velocity.heading() - 1);
@@ -50,18 +53,24 @@ class Car extends MLObject {
             this.fitness /= 1.5
             return;
         }
+        if (this.checkpointTimer === 0) {
+            this.failed = true;
+            this.done = true;
+            this.fitness /= 1.4
+            return;
+        }
 
-        if (this.currentAccel < 0.5 || (this.checkpoint.length === 0 && this.laps === 0)) {
-            if (this.fitness > 10) {
+        if (this.currentAccel < 0.5) {
+            if (this.timeAlive > 10) {
                 this.failed = true;
                 this.done = true;
-                this.fitness /= 1.5
+                this.fitness /= 1.8
                 return;
             }
-            this.fitness = random(0, 1);
-        } else {
-            this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * (1800 - this.timeAlive);
         }
+ 
+        // this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * ((1800 - this.timeAlive) / 5);
+        this.fitness += (1800 - this.timeAlive) / 5;
 
         if (keyIsDown(UP_ARROW)) {
             cars.currentAccel += 0.1;
@@ -119,6 +128,7 @@ class Car extends MLObject {
     checkPointCheck() {
         let checkpointIndex = this.checkpoint.length;
         let next = racetrack.checkPoints[checkpointIndex]
+        let prev = racetrack.checkPoints[checkpointIndex - 2]
 
         if (!next) return;
 
@@ -126,12 +136,23 @@ class Car extends MLObject {
             && this.position.x < next.position.x + 50 && this.position.y < next.position.y + 50
         ) {
             this.checkpoint.push(checkpointIndex + 1)
+            this.checkpointTimer += 150;
+            this.fitness += this.checkpointTimer * 5;
+        }
+
+        if (prev && this.position.x > prev.position.x - 50 && this.position.y > prev.position.y - 50
+            && this.position.x < prev.position.x + 50 && this.position.y < prev.position.y + 50
+        ) {
+            this.failed = true;
+            this.done = true;
+            this.fitness = 0;
         }
 
         if (racetrack.checkPoints.length === this.checkpoint.length) {
             this.checkpoint = [];
             this.laps++;
             console.log('LAP COMPLETED!', this.laps)
+            this.checkpointTimer += 150;
         }
     }
 
@@ -201,6 +222,7 @@ class Car extends MLObject {
         if (this.bestGenes) {
             text(this.currentAccel, 10, 30)
             text(this.carSteering, 10, 40)
+            text(this.checkpointTimer, 10, 50)
         }
 
         push();
