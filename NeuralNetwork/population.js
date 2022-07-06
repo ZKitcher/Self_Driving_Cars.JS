@@ -1,5 +1,5 @@
 class Population {
-    constructor(constructor, popSize = 25, mutationRate = 0.1) {
+    constructor(constructor, popSize = 25, mutationRate = 0.05) {
         this.agents = [];
         this.popSize = popSize;
         this.matingPool = [];
@@ -10,14 +10,15 @@ class Population {
         this.timerCount = 30;
         this.timer = this.timerCount;
 
-        this.bestAgent = null
+        this.topAgent = null
+        this.eliteAgents = 5
 
         for (let i = 0; i < this.popSize; i++) {
             this.agents.push(new this.constructor())
         }
 
         if (typeof completedGeneration === 'undefined') {
-            NetworkError.warn('completedGeneration(bestAgent) not set to fire after each generation.', 'MLObject.constructor')
+            NetworkError.warn('completedGeneration(topAgent) not set to fire after each generation.', 'MLObject.constructor')
         }
     }
 
@@ -43,62 +44,70 @@ class Population {
     evaluate() {
         let max = 0;
         let min = Infinity;
-        let bestAgent;
+        let topAgent;
         this.matingPool = [];
 
         this.agents.forEach(e => {
             if (e.fitness > max) {
                 max = e.fitness;
-                bestAgent = e;
+                topAgent = e;
             }
             if (e.fitness < min) min = e.fitness;
         })
 
-        console.log(this.agents.map(e => e.fitness))
-
         this.agents.sort((a, b) => b.fitness - a.fitness).forEach((e, i) => {
-            if (i < this.popSize * .1) {
-                e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10;
-                let n = e.completed || e === bestAgent ? e.fitness *= 2 : e.fitness
+            e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10;
+            if (i < this.popSize / 5) {
+                let n = e.completed || e === topAgent ? e.fitness *= 2 : e.fitness
 
                 for (let i = 0; i < n; i++) {
                     this.matingPool.push(e);
                 }
+                // for (let i = 0; i <= e.fitness; i++) {
+                //     this.matingPool.push(e);
+                // }
             }
         });
 
-        console.log(this.matingPool.sort((a, b) => b.fitness - a.fitness).map(e => e.fitness))
-        this.bestAgent = bestAgent
+        this.topAgent = topAgent
         this.selection()
     }
 
     selection() {
         let newPopulation = [];
 
-        if (this.bestAgent?.completed && typeof completedGeneration !== 'undefined') {
-            completedGeneration(this.bestAgent)
+        if (this.topAgent?.completed && typeof completedGeneration !== 'undefined') {
+            completedGeneration(this.topAgent)
         }
 
-        this.agents.forEach(e => {
+        this.agents.sort((a, b) => b.fitness - a.fitness).forEach((e, i) => {
             let newBrain;
 
-            if (e === this.bestAgent) {
+            if (e === this.topAgent || i < this.eliteAgents + 1) {
                 newBrain = e.brain.copy()
             } else {
-                let coinflip = random(0, 1)
-                newBrain = coinflip > 0.5
-                    ? NeuralNetwork
-                        .mergeNetworks(
-                            random(this.matingPool).brain.copy(),
-                            random(this.matingPool).brain.copy()
-                        )
-                    : random(this.matingPool).brain.copy();
-
+                // let coinflip = random(0, 1)
+                // newBrain = coinflip > 0.5
+                //     ? NeuralNetwork
+                //         .mergeNetworks(
+                //             random(this.matingPool).brain.copy(),
+                //             random(this.matingPool).brain.copy()
+                //         )
+                //     : random(this.matingPool).brain.copy();
+                newBrain = NeuralNetwork
+                    .mergeNetworks(
+                        random(this.matingPool).brain.copy(),
+                        random(this.matingPool).brain.copy()
+                    )
                 newBrain.mutateRandom(newBrain.learningRate, this.mutationRate);
             }
 
             let nextGen = new this.constructor(newBrain);
-            if (e === this.bestAgent) nextGen.bestGenes = true;
+            if (e === this.topAgent) {
+                nextGen.topAgent = true;
+            } else if (i < this.eliteAgents) {
+                nextGen.eliteAgent = true;
+            }
             newPopulation.push(nextGen);
         });
 
@@ -125,10 +134,10 @@ class Population {
         text(this.generation, 10, 15);
         text(this.timer, width - 20, 15);
 
-        if (this.bestAgent)
-            // this.bestAgent.brain.show()
+        // if (this.topAgent)
+        // this.topAgent.brain.show()
 
-            pop();
+        pop();
     }
 }
 
@@ -145,7 +154,8 @@ class MLObject {
         this.failed = false;
         this.success = false;
         this.done = false;
-        this.bestGenes = false;
+        this.topAgent = false;
+        this.eliteAgent = false;
         this.fitness = 0;
         this.prediction;
     }

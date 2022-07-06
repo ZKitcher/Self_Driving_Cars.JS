@@ -53,24 +53,25 @@ class Car extends MLObject {
             this.fitness /= 1.5
             return;
         }
-        if (this.checkpointTimer === 0) {
-            this.failed = true;
-            this.done = true;
-            this.fitness /= 1.4
-            return;
-        }
+        // if (this.checkpointTimer === 0) {
+        //     this.failed = true;
+        //     this.done = true;
+        //     this.fitness /= 1.5
+        //     return;
+        // }
 
         if (this.currentAccel < 0.5) {
             if (this.timeAlive > 10) {
                 this.failed = true;
                 this.done = true;
-                this.fitness /= 1.8
+                this.fitness = 0
                 return;
             }
         }
- 
+
         // this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * ((1800 - this.timeAlive) / 5);
-        this.fitness += (1800 - this.timeAlive) / 5;
+        // this.fitness += this.timeAlive * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * (this.checkpointTimer / 150);
+        this.fitness += this.timeAlive * (this.checkpointTimer / 150);
 
         if (keyIsDown(UP_ARROW)) {
             cars.currentAccel += 0.1;
@@ -137,7 +138,6 @@ class Car extends MLObject {
         ) {
             this.checkpoint.push(checkpointIndex + 1)
             this.checkpointTimer += 150;
-            this.fitness += this.checkpointTimer * 5;
         }
 
         if (prev && this.position.x > prev.position.x - 50 && this.position.y > prev.position.y - 50
@@ -219,17 +219,22 @@ class Car extends MLObject {
     render() {
         //angleMode(RADIANS);
 
-        if (this.bestGenes) {
+        if (this.topAgent) {
+            fill(255);
             text(this.currentAccel, 10, 30)
-            text(this.carSteering, 10, 40)
-            text(this.checkpointTimer, 10, 50)
+            text(this.checkpointTimer, 10, 40)
         }
 
         push();
+        fill(100, 100, 100, 127);
         rectMode(CENTER);
 
+        if (this.topAgent) {
+            fill(100, 0, 0, 127);
+        } else if (this.eliteAgent) {
+            fill(0, 0, 100, 127);
+        }
 
-        fill(this.bestGenes ? 255 : 127, 127);
         stroke(200);
         translate(this.position.x, this.position.y);
 

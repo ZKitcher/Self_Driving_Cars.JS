@@ -18,6 +18,7 @@ function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
     racetrack = new RaceTrack();
     cars = new Population(Car, 100);
+    // cars.eliteAgents = 5;
 
     // cars = new Car()
 }
@@ -59,7 +60,7 @@ const createMLObjectBrain = () => {
     nn.addHiddenLayer(3, 'tanH');
     nn.makeWeights();
 
-    // nn.learningRate = 0.3
+    //nn.learningRate = 0.3
 
     return nn;
 }
