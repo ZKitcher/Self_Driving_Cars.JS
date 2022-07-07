@@ -157,3 +157,181 @@ class MLObject {
         this.prediction;
     }
 }
+
+let genomeInputsN = 2;
+let genomeOutputN = 1;
+let showBest = true;
+
+class NEATPopulation {
+    constructor(constructor, popSize = 25) {
+        this.population = [];
+        this.bestPlayer;
+        this.bestFitness = 0;
+
+        this.generation = 0;
+        this.matingPool = [];
+
+
+        //CONVERT NEAT POP TO OG POP.
+
+        this.agents = [];
+        this.popSize = popSize;
+        this.matingPool = [];
+        this.datacollection = []
+        this.generation = 1;
+        this.mutationRate = 0.05;
+        this.constructor = constructor;
+        this.timerCount = 30;
+        this.timer = this.timerCount;
+
+        this.topAgent = null
+        this.eliteAgents = 5
+
+        for (let i = 0; i < this.popSize; i++) {
+            this.agents.push(new this.constructor(i))
+            this.agents[i].brain.generateNetwork();
+            this.agents[i].brain.mutate();
+        }
+
+        if (typeof completedGeneration === 'undefined') {
+            NetworkError.warn('completedGeneration(topAgent) not set to fire after each generation.', 'MLObject.constructor')
+        }
+    }
+
+    run() {
+        if (frameCount % 60 == 0 && this.timer > 0) {
+            this.timer--;
+        }
+
+        if (this.timer == 0) this.reset()
+
+        this.agents.forEach(e => e.run())
+
+        if (this.agents.filter(e => !e.done).length === 0) this.reset()
+
+        this.render()
+    }
+
+    done() {
+        for (let i = 0; i < this.population.length; i++) {
+            if (!this.population[i].dead) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    evaluate() {
+        this.calculateFitness();
+
+        let averageSum = this.getAverageScore();
+        console.log(averageSum);
+        let children = [];
+
+        this.fillMatingPool();
+        for (let i = 0; i < this.population.length; i++) {
+            let parent1 = this.selectPlayer();
+            let parent2 = this.selectPlayer();
+            if (parent1.fitness > parent2.fitness)
+                children.push(parent1.crossover(parent2));
+            else
+                children.push(parent2.crossover(parent1));
+        }
+
+
+        this.population.splice(0, this.population.length);
+        this.population = children.slice(0);
+        this.generation++;
+        this.population.forEach((element) => {
+            element.brain.generateNetwork();
+        });
+
+        console.log("Generation " + this.generation);
+
+        this.bestPlayer.lifespan = 0;
+        this.bestPlayer.dead = false;
+        this.bestPlayer.score = 1;
+    }
+
+    calculateFitness() {
+        let currentMax = 0;
+        this.population.forEach((element) => {
+            element.calculateFitness();
+            if (element.fitness > this.bestFitness) {
+                this.bestFitness = element.fitness;
+                this.bestPlayer = element.clone();
+                this.bestPlayer.brain.id = "BestGenome";
+                this.bestPlayer.brain.draw();
+            }
+
+            if (element.fitness > currentMax)
+                currentMax = element.fitness;
+        });
+
+        //Normalize
+        this.population.forEach((element, elementN) => {
+            element.fitness /= currentMax;
+        });
+    }
+
+    fillMatingPool() {
+        this.matingPool.splice(0, this.matingPool.length);
+        this.population.forEach((element, elementN) => {
+            let n = element.fitness * 100;
+            for (let i = 0; i < n; i++)
+                this.matingPool.push(elementN);
+        });
+    }
+
+    selectPlayer() {
+        let rand = Math.floor(Math.random() * this.matingPool.length);
+        return this.population[this.matingPool[rand]];
+    }
+
+    getAverageScore() {
+        let avSum = 0;
+        this.population.forEach((element) => {
+            avSum += element.score;
+        });
+
+        return avSum / this.population.length;
+    }
+}
+
+class Player {
+    constructor(id) {
+        this.brain = new NEATGenome(genomeInputsN, genomeOutputN, id);
+
+        // this.score = 1;
+        // this.lifespan = 0;
+        // this.dead = false;
+        // this.decisions = [];
+        // this.vision = [];
+
+        this.failed = false;
+        this.success = false;
+        this.done = false;
+        this.topAgent = false;
+        this.eliteAgent = false;
+        this.fitness = 0;
+        this.prediction;
+    }
+
+    clone() {
+        let clone = new Player();
+        clone.brain = this.brain.clone();
+        return clone;
+    }
+
+    crossover(parent) {
+        let child = new Player();
+        if (parent.fitness < this.fitness)
+            child.brain = this.brain.crossover(parent.brain);
+        else
+            child.brain = parent.brain.crossover(this.brain);
+
+        child.brain.mutate()
+        return child;
+    }
+}

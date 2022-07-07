@@ -1,4 +1,4 @@
-const rand = (a, b) => a instanceof Array ? a[floor(rand(a.length))] : b === undefined ? Math.random(1) * a : Math.random(1) * (b - a) + a;
+const rand = (a, b) => a === undefined ? Math.random() : a instanceof Array ? a[floor(rand(a.length))] : b === undefined ? Math.random(1) * a : Math.random(1) * (b - a) + a;
 const exp = x => Math.exp(x);
 const abs = x => Math.abs(x);
 const log = x => Math.log(x);
@@ -8,7 +8,7 @@ const sqrt = x => Math.sqrt(x);
 const cosh = x => (exp(x) + exp(-x)) / 2;
 const floor = x => Math.floor(x);
 const isNumber = x => typeof x === 'number';
-const clog = (...arg) => console.log(...arg)
+const clog = (...arg) => console.log(...arg);
 
 class Matrix {
     constructor(rows = 0, cols = 0, matrix = null) {

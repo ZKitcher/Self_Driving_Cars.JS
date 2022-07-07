@@ -208,7 +208,11 @@ class NeuralNetwork {
         this.architecture = [i, o];
 
         this.epoch = 0;
-        this.recordLoss = false;
+        this.timeTraining = 0;
+
+        this.correctPrediction = 0;
+        this.predictionCount = 0;
+        this.accuracyThreshold = 0.1;
 
         this.lossfunc = lossFunctions.MeanSquareError;
         this.lossfuncName = translateLossFunc(this.lossfunc.name);
@@ -278,7 +282,7 @@ class NeuralNetwork {
                 NetworkError.error(`'${act}' is not a valid activation function, as a result, the activation function is set to 'sigmoid' by default.`, 'NeuralNetwork.outputActivation');
                 return;
             } else {
-                NetworkError.error("Did not detect a string value, as a result, the activation function is set to 'sigmoid' by default.", 'NeuralNetwork.outputActivation');
+                NetworkError.error(`Did not detect a string value, as a result, the activation function is set to 'sigmoid' by default.`, 'NeuralNetwork.outputActivation');
                 return;
             }
         }
@@ -352,10 +356,16 @@ class NeuralNetwork {
                 return;
             }
             clog('🔢 Inputs:\t\t', JSON.stringify(e.input));
-            if (e.target) clog('🎯 Target:\t\t', JSON.stringify(e.target))
-            clog('🔮 Prediction:\t', JSON.stringify(this.feedForward(e.input, { log: false, decimals: 3 })))
-            clog('---------------------------')
-        })
+            const pred = this.feedForward(e.input, { log: false, decimals: 3 });
+            if (e.target) {
+                const correct = this.isCorrect(e.target, pred);
+                clog('🎯 Target:\t\t', JSON.stringify(e.target));
+                clog('%c🔮 Prediction:', `background-color: ${correct ? '#bcffa8' : '#ffa8a8'};`, '\t', JSON.stringify(pred), `${correct ? '✔️' : '❌'}`);
+            } else {
+                clog(`🔮 Prediction:\t`, JSON.stringify(pred));
+            }
+            clog('---------------------------');
+        });
     }
 
     bckDefaults() {
@@ -384,6 +394,9 @@ class NeuralNetwork {
         }
 
         this.outs = this.feedForward(inputs, { log: false, mode: options.mode });
+
+        this.predictionCount++;
+        this.correctPrediction += this.isCorrect(target, this.outs) ? 1 : 0;
 
         this.errors[this.errors.length - 1] = Matrix.sub(targets, this.Layers[this.Layers.length - 1].layer);
 
@@ -432,6 +445,10 @@ class NeuralNetwork {
         }
     };
 
+    isCorrect(target, prediction) {
+        return target.filter((e, i) => abs(e - prediction[i]) <= this.accuracyThreshold).length === target.length
+    }
+
     train(generations, dataset, options) {
         dataset.forEach(e => {
             if (!e.input) {
@@ -444,11 +461,11 @@ class NeuralNetwork {
             }
         })
 
+        const start = performance.now();
         for (this.epoch; this.epoch < generations; this.epoch++) {
-            dataset.forEach(e => {
-                this.backpropagate(e.input, e.target, options);
-            })
+            dataset.forEach(e => this.backpropagate(e.input, e.target, options))
         }
+        this.timeTraining += performance.now() - start;
     };
 
     mapWeights(f) {
@@ -524,11 +541,14 @@ class NeuralNetwork {
             clog('Gradients:');
             this.gradients.forEach(e => e.log({ decimals: options.decimals, table: options.table }))
         }
+
         if (options.misc) {
             clog('Other Values: ');
             clog(`\tLearning Rate:\t${this.learningRate}`);
             clog(`\tLoss Function:\t${this.lossfuncName}`);
             clog(`\tCurrent Epoch:\t${(this.epoch).toLocaleString()}`);
+            clog(`\tAccuracy:\t\t${((this.correctPrediction / this.predictionCount) * 100).toFixed(2)}%`);
+            clog(`\tTime Training:\t${this.timeTraining.toFixed(2)}/ms\t~${(this.timeTraining / this.epoch).toFixed(5)}/ms Per Epoch`);
             clog(`\tLatest Loss:\t${this.loss}`);
             this.print(`---------------------------`);
         }
@@ -638,6 +658,12 @@ class NeuralNetwork {
         this.architecture = data.architecture;
         this.epoch = data.epoch;
         this.percentile = data.percentile;
+
+        this.timeTraining = data.timeTraining;
+        this.correctPrediction = data.correctPrediction;
+        this.predictionCount = data.predictionCount;
+        this.accuracyThreshold = data.accuracyThreshold;
+
         return this;
     }
 
@@ -650,6 +676,12 @@ class NeuralNetwork {
             lossFunctionName: this.lossfuncName,
             latestLoss: this.loss,
             percentile: this.percentile,
+
+            timeTraining: this.timeTraining,
+            correctPrediction: this.correctPrediction,
+            predictionCount: this.predictionCount,
+            accuracyThreshold: this.accuracyThreshold,
+
             layers: this.Layers.map(e => e),
             weights: this.weights.map(e => e.matrix),
             biases: this.biases.map(e => e.matrix),
@@ -775,6 +807,443 @@ class NeuralNetwork {
     }
 }
 
+//------------------------------------------------------------------------------------------------------
+// NeuroEvolution of Augmenting Topologies (NEAT)
+
+class NEATConnection {
+    constructor(from, to, weight) {
+        this.fromNode = from;
+        this.toNode = to;
+        this.weight = weight;
+        this.enabled = true;
+    }
+
+    mutateWeight() {
+        rand() < 0.05 ? this.weight = rand(-1, 1) : this.weight += randomGaussian() / 50;
+    }
+
+    clone() {
+        let clone = new NEATConnection(this.fromNode, this.toNode, this.weight);
+        clone.enabled = this.enabled;
+        return clone;
+    }
+
+    getInnovationNumber() {
+        return (1 / 2) * (this.fromNode.number + this.toNode.number) * (this.fromNode.number + this.toNode.number + 1) + this.toNode.number;
+    }
+}
+
+var activationsNames = ['Sigmoid', 'Identity', 'Step', 'Tanh', 'ReLu'];
+
+class NEATNode {
+    constructor(num, lay, isOutput) {
+        this.number = num;
+        this.layer = lay;
+        this.activationFunction = floor(rand(0, 5));
+        this.bias = rand(-1, 1);
+        this.output = isOutput || false;
+
+        this.inputSum = 0;
+        this.outputValue = 0;
+        this.outputConnections = [];
+    }
+
+    engage() {
+        if (this.layer != 0) {
+            this.outputValue = this.activation(this.inputSum + this.bias);
+        }
+
+        this.outputConnections.forEach((conn) => {
+            if (conn.enabled) {
+                conn.toNode.inputSum += conn.weight * this.outputValue;
+            }
+        });
+    }
+
+    mutateBias() {
+        rand() < 0.05 ? this.bias = rand(-1, 1) : this.bias += randomGaussian() / 50;
+    }
+
+    mutateActivation() {
+        this.activationFunction = floor(rand(0, 5));
+    }
+
+    isConnectedTo(node) {
+        if (node.layer == this.layer) {
+            return false;
+        }
+
+        if (node.layer < this.layer) {
+            node.outputConnections.forEach((conn) => {
+                if (conn.toNode == this) return true;
+            });
+        } else {
+            this.outputConnections.forEach((conn) => {
+                if (conn.toNode == node) return true;
+            });
+        }
+
+        return false;
+    }
+
+    clone() {
+        let node = new NEATNode(this.number, this.layer, this.output);
+        node.bias = this.bias;
+        node.activationFunction = this.activationFunction;
+        return node;
+    }
+
+    activation(x) {
+        switch (this.activationFunction) {
+            case 0: //Sigmoid
+                return 1 / (1 + Math.pow(Math.E, -4.9 * x));
+            case 1: //Identity
+                return x;
+            case 2: //Step
+                return x > 0 ? 1 : 0;
+            case 3: //Tanh
+                return Math.tanh(x);
+            case 4: //ReLu
+                return x < 0 ? 0 : x;
+            default: //Sigmoid
+                return 1 / (1 + Math.pow(Math.E, -4.9 * x));
+        }
+    }
+}
+
+class NEATGenome {
+    constructor(i = 1, o = 1, id, offSpring = false) {
+        this.inputs = i;
+        this.outputs = o;
+        this.id = id;
+        this.layers = 2;
+        this.nextNode = 0;
+
+        this.nodes = [];
+        this.connections = [];
+
+        if (!offSpring) {
+            for (let i = 0; i < this.inputs; i++) {
+                this.nodes.push(new NEATNode(this.nextNode, 0));
+                this.nextNode++;
+            }
+
+            for (let i = 0; i < this.outputs; i++) {
+                let node = new NEATNode(this.nextNode, 1, true);
+                this.nodes.push(node);
+                this.nextNode++;
+            }
+
+            for (let i = 0; i < this.inputs; i++) {
+                for (let j = this.inputs; j < this.outputs + this.inputs; j++) {
+                    let weight = Math.random() * this.inputs * Math.sqrt(2 / this.inputs);
+                    this.connections.push(new NEATConnection(this.nodes[i], this.nodes[j], weight));
+                }
+            }
+        }
+    }
+
+    generateNetwork() {
+        this.nodes.forEach((node) => {
+            node.outputConnections.splice(0, node.outputConnections.length);
+        });
+
+        this.connections.forEach((conn) => {
+            conn.fromNode.outputConnections.push(conn);
+        });
+
+        this.sortByLayer();
+    }
+
+    feedForward(inputValues) {
+        this.generateNetwork();
+
+        this.nodes.forEach((node) => { node.inputSum = 0; });
+
+        for (let i = 0; i < this.inputs; i++) {
+            this.nodes[i].outputValue = inputValues[i];
+        }
+
+        let result = [];
+        this.nodes.forEach((node) => {
+            node.engage();
+            if (node.output) result.push(node.outputValue);
+        });
+        return result;
+    }
+
+    crossover(partner) {
+        //TODO: find a good way to generate unique ids
+        let offSpring = new NEATGenome(this.inputs, this.outputs, 0, true);
+        offSpring.nextNode = this.nextNode;
+
+        for (let i = 0; i < this.nodes.length; i++) {
+            let node = this.nodes[i].clone();
+            if (node.output) {
+                let partnerNode = partner.nodes[partner.getNode(node.number)];
+                if (rand() > 0.5) {
+                    node.activationFunction = partnerNode.activationFunction;
+                    node.bias = partnerNode.bias;
+                }
+            }
+            offSpring.nodes.push(node);
+        }
+
+        for (let i = 0; i < this.connections.length; i++) {
+            let index = this.commonConnection(this.connections[i].getInnovationNumber(), partner.connections);
+
+            if (index != -1) {
+                let conn = Math.random() > 0.5 ? this.connections[i].clone() : partner.connections[index].clone();
+
+                let fromNode = offSpring.nodes[offSpring.getNode(conn.fromNode.number)];
+                let toNode = offSpring.nodes[offSpring.getNode(conn.toNode.number)];
+                conn.fromNode = fromNode;
+                conn.toNode = toNode;
+
+                if (fromNode && toNode) offSpring.connections.push(conn);
+            } else {
+                let conn = this.connections[i].clone();
+
+                let fromNode = offSpring.nodes[offSpring.getNode(conn.fromNode.number)];
+                let toNode = offSpring.nodes[offSpring.getNode(conn.toNode.number)];
+                conn.fromNode = fromNode;
+                conn.toNode = toNode;
+
+                if (fromNode && toNode) offSpring.connections.push(conn);
+            }
+        }
+
+        offSpring.layers = this.layers;
+        return offSpring;
+    }
+
+    mutate() {
+        let mut;
+
+        if (rand() < 0.8) { //80%
+            //MOD Connections
+            mut = 'ModConn';
+            for (var i = 0; i < this.connections.length; i++) {
+                this.connections[i].mutateWeight();
+            }
+        }
+
+        if (rand() < 0.5) { //50%
+            //MOD Bias
+            mut = 'ModBias';
+            for (var i = 0; i < this.nodes.length; i++) {
+                this.nodes[i].mutateBias();
+            }
+        }
+
+        if (rand() < 0.1) { //10%
+            //MOD Node
+            mut = 'ModAct';
+            let i = Math.floor(rand() * this.nodes.length);
+            this.nodes[i].mutateActivation();
+        }
+
+        if (rand() < 0.05) { //5%
+            //ADD Connections
+            mut = 'AddConn';
+            this.addConnection();
+        }
+
+        if (rand() < 0.01) { //1%
+            //ADD Node
+            mut = 'AddNode';
+            this.addNode();
+        }
+    }
+
+    addNode() {
+        let connectionIndex = Math.floor(rand() * this.connections.length);
+        let pickedConnection = this.connections[connectionIndex];
+        pickedConnection.enabled = false;
+        this.connections.splice(connectionIndex, 1);
+
+        let newNode = new NEATNode(this.nextNode, pickedConnection.fromNode.layer + 1);
+        this.nodes.forEach((node) => {
+            if (node.layer > pickedConnection.fromNode.layer) node.layer++;
+        });
+
+        let newConnection1 = new NEATConnection(pickedConnection.fromNode, newNode, 1);
+        let newConnection2 = new NEATConnection(newNode, pickedConnection.toNode, pickedConnection.weight);
+
+        this.layers++;
+        this.connections.push(newConnection1);
+        this.connections.push(newConnection2);
+        this.nodes.push(newNode);
+        this.nextNode++;
+    }
+
+    addConnection() {
+        if (this.fullyConnected()) return;
+
+        let node1 = floor(rand() * this.nodes.length);
+        let node2 = floor(rand() * this.nodes.length);
+
+        while (this.nodes[node1].layer == this.nodes[node2].layer || this.nodesConnected(this.nodes[node1], this.nodes[node2])) {
+            node1 = floor(rand() * this.nodes.length);
+            node2 = floor(rand() * this.nodes.length);
+        }
+
+        if (this.nodes[node1].layer > this.nodes[node2].layer) {
+            let temp = node1;
+            node1 = node2;
+            node2 = temp;
+        }
+
+        let newConnection = new NEATConnection(this.nodes[node1], this.nodes[node2], rand() * this.inputs * sqrt(2 / this.inputs));
+        this.connections.push(newConnection);
+    }
+
+    commonConnection(innN, connections) {
+        for (let i = 0; i < connections.length; i++) {
+            if (innN == connections[i].getInnovationNumber()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    nodesConnected(node1, node2) {
+        for (let i = 0; i < this.connections.length; i++) {
+            let conn = this.connections[i];
+            if ((conn.fromNode == node1 && conn.toNode == node2) || (conn.fromNode == node2 && conn.toNode == node1)) {
+                return true;
+            }
+        };
+        return false;
+    }
+
+    fullyConnected() {
+        let maxConnections = 0;
+        let nodesPerLayer = [];
+
+        this.nodes.forEach((node) => {
+            if (nodesPerLayer[node.layer] != undefined) {
+                nodesPerLayer[node.layer]++;
+            } else {
+                nodesPerLayer[node.layer] = 1;
+            }
+        });
+
+        for (let i = 0; i < this.layers - 1; i++) {
+            for (let j = i + 1; j < this.layers; j++) {
+                maxConnections += nodesPerLayer[i] * nodesPerLayer[j];
+            }
+        }
+
+        return maxConnections == this.connections.length;
+    }
+
+    sortByLayer() {
+        this.nodes.sort((a, b) => a.layer - b.layer);
+    }
+
+    clone() {
+        let clone = new NEATGenome(this.inputs, this.outputs, this.id);
+        clone.nodes = this.nodes.slice(0, this.nodes.length);
+        clone.connections = this.connections.slice(0, this.connections.length);
+        return clone;
+    }
+
+    getNode(x) {
+        for (let i = 0; i < this.nodes.length; i++) {
+            if (this.nodes[i].number == x) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    calculateWeight() {
+        return this.connections.length + this.nodes.length;
+    }
+
+    draw(width = 400, height = 400, container = 'svgContainer') {
+        var element = document.getElementById(this.id);
+        if (element) element.parentNode.removeChild(element);
+
+        var svg = d3.select('body').append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .attr('id', this.id);
+
+
+        var force = d3.layout.force()
+            .gravity(.05)
+            .distance(100)
+            .charge(-100)
+            .size([width, height]);
+
+        let connections = [];
+        this.connections.forEach(conn => {
+            connections.push({ source: this.getNode(conn.fromNode.number), target: this.getNode(conn.toNode.number), weight: conn.weight, enabled: conn.enabled });
+        });
+
+        let nodes = [];
+        this.nodes.forEach(originalNode => {
+            let node = originalNode.clone();
+            if (node.layer == 0) {
+                node.fixed = true;
+                node.y = height - (height * 0.2);
+                node.x = ((width / this.inputs) * node.number) + (width / this.inputs) / 2;
+            }
+
+            if (node.output) {
+                node.fixed = true;
+                node.y = (height * 0.2);
+                node.x = ((width / this.outputs) * (node.number - this.inputs)) + (width / this.outputs) / 2;
+            }
+
+            nodes.push(node);
+        });
+
+        force.nodes(nodes)
+            .links(connections)
+            .start();
+
+        var link = svg.selectAll('.link')
+            .data(connections)
+            .enter().append('line')
+            .attr('class', 'link')
+            .style('stroke-width', function (d) { return d.enabled ? (d.weight > 0 ? 0.3 + d.weight : 0.3 + d.weight * -1) : 0 })
+            .style('stroke', function (d) { return d.weight > 0 ? '#0f0' : '#f00'; });
+
+        var node = svg.selectAll('.node')
+            .data(nodes)
+            .enter().append('g')
+            .attr('class', 'node')
+            .call(force.drag);
+
+        node.append('circle')
+            .attr('r', '5')
+            .attr('fill', function (d) { return d.layer == 0 ? '#00f' : d.output ? '#f00' : '#000' });
+
+        node.append('text')
+            .attr('dx', 12)
+            .attr('dy', '.35em')
+            .text(function (d) { return d.number + (d.layer > 0 ? '(' + activationsNames[d.activationFunction] + ')' : null) });
+
+        force.on('tick', function () {
+            link.attr('x1', function (d) { return d.source.x; })
+                .attr('y1', function (d) { return d.source.y; })
+                .attr('x2', function (d) { return d.target.x; })
+                .attr('y2', function (d) { return d.target.y; });
+
+            node.attr('transform', function (d) { return 'translate(' + d.x + ',' + d.y + ')'; });
+        });
+
+        var element = document.getElementById(this.id);
+        document.getElementById(container).append(element);
+    }
+}
+
+//------------------------------------------------------------------------------------------------------
+
+
 const download = (title, data) => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(data);
     let downloadAnchorNode = document.createElement('a');
@@ -805,15 +1274,15 @@ const XORDemo = () => {
         }
     ];
 
-    clog('%cXOR Gate Demo', 'padding: 0.2em; font-size: 2em;');
+    clog('%cXOR Gate Demo', 'font-size: 2em; font-weight: bold;');
     const nn = new NeuralNetwork(2, 1);
     nn.addHiddenLayer(6, actFunc.tanH);
     nn.outputActivation(actFunc.sigmoid);
     nn.makeWeights();
-    clog('%c📉 Before Training', 'padding: 0.2em; font-size: 2em; background: #FF6E6E;');
+    clog('%c📉 Before Training', 'padding: 0.2em; font-size: 1.5em; background: #FF6E6E;');
     nn.exhibition(dataset);
     nn.train(5000, dataset);
-    clog('%c📈 After Training', 'padding: 0.2em; font-size: 2em; background: #3BFF72;');
+    clog('%c📈 After Training', 'padding: 0.2em; font-size: 1.5em; background: #3BFF72;');
     nn.exhibition(dataset);
     nn.log();
 }
