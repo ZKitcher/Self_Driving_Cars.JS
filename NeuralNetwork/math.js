@@ -60,7 +60,6 @@ class Matrix {
             }
         }
         return ans;
-
     };
 
     // Add a value or Matrix to a Matrix object.
@@ -588,7 +587,6 @@ const lossfuncs = {
             let yHat = predictions[i];
             let x = y - yHat;
 
-            //Mean absolute exponential function
             let top = -x * (exp(-x) - 1);
             let down = exp(-x) + 1;
             sum += top / down;
@@ -645,7 +643,6 @@ const lossfuncs = {
         return sum / target.length;
     },
 };
-
 
 const activations = {
     sigmoid(x) {
@@ -753,36 +750,5 @@ const activations = {
     },
     leakysigmoid_d(x) {
         return exp(-x) / pow(exp(-x) + 1, 2) + 1 / 100;
-    },
-};
-
-const poolfuncs = {
-    max: function (arr) {
-        let record = 0;
-        let len = arr.length;
-        for (let i = 0; i < len; i++) {
-            if (arr[i] > record) {
-                record = arr[i];
-            }
-        }
-        return record;
-    },
-    min: function (arr) {
-        let record = Infinity;
-        let len = arr.length;
-        for (let i = 0; i < len; i++) {
-            if (arr[i] < record) {
-                record = arr[i];
-            }
-        }
-        return record;
-    },
-    avg: function (arr) {
-        let sum = 0;
-        let len = arr.length;
-        for (let i = 0; i < len; i++) {
-            sum += arr[i];
-        }
-        return sum / len;
     },
 };

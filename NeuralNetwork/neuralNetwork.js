@@ -28,12 +28,59 @@ NetworkError.error = (error, method) => {
     console.trace();
 };
 
-
 const LayerType = {
     input: 'input',
     hidden: 'hidden',
     output: 'output',
-    pool: 'pool'
+}
+
+const actFunc = {
+    sigmoid: 'sigmoid',
+    silu: 'silu',
+    tanH: 'tanh',
+    leakyrelu: 'leakyrelu',
+    relu: 'relu',
+    sinc: 'sinc',
+    softsign: 'softsign',
+    binary: 'binary',
+    softplus: 'softplus',
+    leakyrelucapped: 'leakyrelucapped',
+    leakysigmoid: 'leakysigmoid',
+}
+
+const lossFunctions = {
+    MeanSquareError: lossfuncs.mse,
+    MeanAbsoluteError: lossfuncs.mae,
+    MeanBiasError: lossfuncs.mbe,
+    BinaryCrossEntropy: lossfuncs.bce,
+    MinimumClassificationError: lossfuncs.mce,
+    RootMeanSquareError: lossfuncs.rmse,
+    MeanAbsoluteExponential: lossfuncs.mael,
+    LogCoshLoss: lossfuncs.lcl,
+    Quantile: lossfuncs.quantile
+}
+
+const translateLossFunc = loss => {
+    switch (loss) {
+        case 'mse':
+            return 'Mean Square Error'
+        case 'mae':
+            return 'Mean Absolute Error'
+        case 'mbe':
+            return 'Mean Bias Error'
+        case 'bce':
+            return 'Binary Cross Entropy'
+        case 'mce':
+            return 'Minimum Classification Error'
+        case 'rmse':
+            return 'Root Mean Square Error'
+        case 'mael':
+            return 'Mean Absolute Exponential'
+        case 'lcl':
+            return 'Log Cosh Loss'
+        case 'quantile':
+            return 'Quantile'
+    }
 }
 
 // { String } type A string representing the type of this layer.
@@ -42,146 +89,70 @@ const LayerType = {
 // { Number } Stride The number of jumps the sample is going to perform for each iteration.
 
 class Layer {
-    constructor(type, size, activationFunc, arg3, arg4, arg5) {
+    constructor(type, size, activationFunction) {
         this.type = type;
-        this.subtype = this.getSubtype();
-        if (this.subtype !== LayerType.pool) {
-            if (this.type === LayerType.hidden || this.type === LayerType.output) {
-                this.size = size;
-                this.setFunc(activationFunc);
-                this.layer = new Matrix(this.size, 1);
-            } else if (this.type === LayerType.input) {
-                this.size = size;
-                this.layer = new Matrix(this.size, 1);
-            }
-        } else if (this.subtype === LayerType.pool) {
-            // Pooling Layers
-            this.stride = arg3;
-            this.sampleSize = activationFunc;
-            this.inputSize = size;
-
-            if (arg4 !== undefined && arg5 !== undefined) {
-                this.sizeX = arg4;
-                this.sizeY = arg5;
-            } else {
-                this.sizeX = Math.sqrt(this.inputSize);
-                this.sizeY = this.sizeX;
-                if (this.sizeX !== Math.floor(this.sizeX)) {
-                    NetworkError.error('The array can not be set in a square matrix', 'Layer.constructor');
-                    return;
-                }
-            }
-
-            this.size = Layer.getPoolOutputLength(arg2, arg3, this.sizeX, this.sizeY);
-            let divx = this.inputSize / this.sizeX;
-            let divy = this.inputSize / this.sizeY;
-
-            if (divx !== floor(divx) && divy !== floor(divy)) {
-                NetworkError.error('The width & height value specified to arrange the inputted array as a matrix are not valid. (The array length must be divisible by the width & height values.)', 'Layer.constructor');
-                return;
-            }
-            if (this.size !== floor(this.size)) {
-                NetworkError.error(`The Width must be divisible by the stride (jumps size). Width is the root of the array's length.`, 'Layer.constructor');
-                return;
-            }
-
-            this.input = new Matrix(this.inputSize, 1);
+        if (this.type === LayerType.hidden || this.type === LayerType.output) {
+            this.size = size;
+            this.setActivation(activationFunction);
             this.layer = new Matrix(this.size, 1);
-
-            // picking the pooling function:
-            this.prefix = this.getPrefix();
-            this.poolfunc = poolfuncs[this.prefix];
-
-            //Downsampling function, appling the pool function to the segmented arrays.
-            this.downsample = function (data, f, s) {
-                this.input = Matrix.fromArray(data);
-                //Split inputs in smaller pool arrays.
-                let samples = Layer.selectPools(data, f, s, this.sizeX, this.sizeY);
-                let output = [];
-                for (let i = 0; i < samples.length; i++) {
-                    output[i] = this.poolfunc(samples[i]);
-                }
-                this.layer = Matrix.fromArray(output);
-                return output;
-            };
+        } else if (this.type === LayerType.input) {
+            this.size = size;
+            this.layer = new Matrix(this.size, 1);
+        } else if (typeof this.type === 'string') {
+            NetworkError.error(`The Layer type '${this.type}' is not valid.`, 'Layer.constructor');
         } else {
-            if (typeof this.type === 'string') {
-                NetworkError.error(`The Layer type '${this.type}' is not valid.`, 'Layer.constructor');
-            } else {
-                NetworkError.error('You need to specify a valid type of Layer', 'Layer.constructor');
-            }
+            NetworkError.error('You need to specify a valid type of Layer', 'Layer.constructor');
         }
     }
 
-
-    feed(data, options) {
-        if (this.subtype !== LayerType.pool) {
-            NetworkError.error("This function can only be used by Layers with 'pool' subtype", 'Layer.feed');
-        } else {
-            let showLog = false;
-            let table = false;
-            let f = this.sampleSize;
-            let s = this.stride;
-            if (options !== undefined) {
-                if (options.log) {
-                    showLog = options.log;
-                }
-                if (options.table) {
-                    table = options.table;
-                }
-            }
-            if (data.length !== this.inputSize) {
-                NetworkError.error(`The data you are trying to feed to this ${this.type} layer is not the same length as the number of input this layer has.`, 'Layer.feed');
-                return;
-            } else {
-                let downsampled = this.downsample(data, f, s);
-                if (showLog) {
-                    if (table) {
-                        console.table(downsampled);
-                    } else {
-                        console.log(downsampled);
-                    }
-                }
-                return downsampled;
-            }
-        }
-    };
-
-    print() {
-        console.log(this);
-    };
-
-    getSqIndex(w, i, j) {
-        return w * j + i;
-    };
-
-    getSubtype() {
-        let str = this.type;
-        let len = str.length;
-        let subtype = str.slice(len - 4, len);
-        if (subtype === LayerType.pool) {
-            return subtype;
-        } else {
-            return str;
-        }
-    };
-
-    setFunc(act) {
-        const lowerCaseAct = act.toLocaleLowerCase();
-        let obj = Layer.stringTofunc(lowerCaseAct);
+    setActivation(act) {
+        const obj = Layer.stringTofunc(act);
         if (obj !== undefined) {
             this.actname = obj.name;
             this.actname_d = obj.name_d;
             this.actfunc = obj.func;
             this.actfunc_d = obj.func_d;
         } else {
-            NetworkError.error('Bad activation information', 'Layer.setFunc');
+            NetworkError.error('Bad activation information', 'Layer.setActivation');
             return;
         }
     };
 
-    static getPoolOutputLength(f, s, w, h) {
-        return ((w - f) / s + 1) * ((h - f) / s + 1);
+    feed(data, options) {
+        let showLog = false;
+        let table = false;
+        let f = this.sampleSize;
+        let s = this.stride;
+        if (options !== undefined) {
+            if (options.log) {
+                showLog = options.log;
+            }
+            if (options.table) {
+                table = options.table;
+            }
+        }
+        if (data.length !== this.inputSize) {
+            NetworkError.error(`The data you are trying to feed to this ${this.type} layer is not the same length as the number of input this layer has.`, 'Layer.feed');
+            return;
+        } else {
+            let downsampled = this.downsample(data, f, s);
+            if (showLog) {
+                if (table) {
+                    console.table(downsampled);
+                } else {
+                    clog(downsampled);
+                }
+            }
+            return downsampled;
+        }
+    };
+
+    print() {
+        clog(this);
+    };
+
+    getSqIndex(w, i, j) {
+        return w * j + i;
     };
 
     getPrefix() {
@@ -191,38 +162,20 @@ class Layer {
         return prefix;
     };
 
-    static selectPools(arr, f, s, w, h) {
-        if (w !== Math.floor(w)) {
-            return;
-        } else if (w / s !== Math.floor(w / s)) {
-            return;
-        }
-        let samples = [];
-        for (let y = 0; y + f <= h; y += s) {
-            for (let x = 0; x + f <= w; x += s) {
-                let sample = [];
-                for (let j = 0; j < f; j++) {
-                    for (let i = 0; i < f; i++) {
-                        sample.push(arr[Layer.getSqIndex(w, i + x, j + y)]);
-                    }
-                }
-                samples.push(sample);
-            }
-        }
-        return samples;
-    };
-
     static stringTofunc(str) {
-        let act = str.toLocaleLowerCase();
-        let der = act + '_d';
-        let func;
-        let func_d;
-        func = activations[act];
-        func_d = activations[der];
+        const act = str.toLocaleLowerCase();
+        const der = `${act}_d`;
+        let func = activations[act];
+        let func_d = activations[der];
 
         if (func !== undefined) {
             if (func_d !== undefined) {
-                return { name: act, name_d: der, func: func, func_d: func_d };
+                return {
+                    name: act,
+                    name_d: der,
+                    func: func,
+                    func_d: func_d
+                };
             } else {
                 NetworkError.error(`You need to create the derivative of your custom function. The activation function specified '${str}' does not have a derivative assigned. The activation function was set to the default 'sigmoid'.`, 'Layer.stringTofunc');
                 return;
@@ -232,10 +185,6 @@ class Layer {
             return;
         }
     };
-
-    log() {
-        console.log(this);
-    };
 };
 
 class NeuralNetwork {
@@ -244,7 +193,7 @@ class NeuralNetwork {
         this.o = o;
 
         this.inputs = new Layer(LayerType.input, i);
-        this.outputs = new Layer(LayerType.output, o, 'sigmoid');
+        this.outputs = new Layer(LayerType.output, o, actFunc.sigmoid);
 
         this.Layers = [this.inputs, this.outputs];
         this.weights = [];
@@ -261,8 +210,9 @@ class NeuralNetwork {
         this.epoch = 0;
         this.recordLoss = false;
 
-        this.lossfunc = lossfuncs.mse;
-        this.lossfunc_s = this.lossfunc.name;
+        this.lossfunc = lossFunctions.MeanSquareError;
+        this.lossfuncName = translateLossFunc(this.lossfunc.name);
+
         this.percentile = 0.5;
     }
 
@@ -280,10 +230,10 @@ class NeuralNetwork {
                 if (typeof act === 'string') {
                     NetworkError.error(`'${act}' is not a valid activation function, as a result, the activation function was set to 'sigmoid'.`, 'NeuralNetwork.addHiddenLayer');
                 }
-                act = 'sigmoid';
+                act = actFunc.sigmoid;
             }
         } else {
-            act = 'sigmoid';
+            act = actFunc.sigmoid;
         }
 
         this.architecture.splice(this.architecture.length - 1, 0, size);
@@ -291,12 +241,12 @@ class NeuralNetwork {
         this.Layers.splice(this.Layers.length - 1, 0, layer);
     };
 
-    makeWeights(arg1, arg2) {
+    makeWeights(x, y) {
         let min = -1;
         let max = 1;
-        if (arg1 !== undefined && arg2 !== undefined) {
-            min = arg1;
-            max = arg2;
+        if (x !== undefined && y !== undefined) {
+            min = x;
+            max = y;
         }
         for (let i = 0; i < this.Layers.length - 1; i++) {
             let previousLayerObj = this.Layers[i];
@@ -311,7 +261,7 @@ class NeuralNetwork {
             this.biases[i] = biases.randomize(1, -1);
 
             if (layerObj.actfunc === undefined) {
-                layerObj.setFunc('sigmoid');
+                layerObj.setActivation(actFunc.sigmoid);
             }
         }
 
@@ -332,8 +282,7 @@ class NeuralNetwork {
                 return;
             }
         }
-
-        this.Layers[this.Layers.length - 1].setFunc(act);
+        this.Layers[this.Layers.length - 1].setActivation(act);
     };
 
     ffwDefaults() {
@@ -342,30 +291,6 @@ class NeuralNetwork {
             table: false,
             decimals: undefined,
             asLabel: false,
-        };
-    };
-
-    bckDefaults() {
-        return {
-            log: false,
-            mode: 'cpu',
-            table: false,
-            dropout: undefined,
-        };
-    };
-
-    logDefaults() {
-        return {
-            struct: true,
-            misc: true,
-            weights: false,
-            biases: false,
-            gradients: false,
-            errors: false,
-            layers: false,
-            table: false,
-            decimals: undefined,
-            details: false,
         };
     };
 
@@ -401,7 +326,7 @@ class NeuralNetwork {
         } else if (options.asLabel) {
             out = this.asLabel(out);
         } else if (roundData && !options.asLabel) {
-            out = out.map((x) => round(x * dec) / dec);
+            out = out.map(x => round(x * dec) / dec);
         }
 
         if (options.log) {
@@ -426,15 +351,21 @@ class NeuralNetwork {
                 NetworkError.error(`Dataset missing (.input) property.`, 'NeuralNetwork.exhibition');
                 return;
             }
-        })
-
-        dataset.forEach(e => {
-            clog('🔢 Inputs:\t\t', e.input);
-            if (e.target) clog('🎯 Target:\t\t', e.target)
-            clog('🔮 Prediction:\t', this.feedForward(e.input, { log: false, decimals: 3 }))
+            clog('🔢 Inputs:\t\t', JSON.stringify(e.input));
+            if (e.target) clog('🎯 Target:\t\t', JSON.stringify(e.target))
+            clog('🔮 Prediction:\t', JSON.stringify(this.feedForward(e.input, { log: false, decimals: 3 })))
             clog('---------------------------')
-        });
+        })
     }
+
+    bckDefaults() {
+        return {
+            log: false,
+            mode: 'cpu',
+            table: false,
+            dropout: undefined,
+        };
+    };
 
     backpropagate(inputs, target, options = this.bckDefaults()) {
         let targets;
@@ -530,6 +461,21 @@ class NeuralNetwork {
         }
     };
 
+    logDefaults() {
+        return {
+            struct: true,
+            misc: true,
+            weights: false,
+            biases: false,
+            gradients: false,
+            errors: false,
+            layers: false,
+            table: false,
+            decimals: 3,
+            details: false,
+        };
+    };
+
     log(options = this.logDefaults()) {
         let decimals = 1000;
         if (options.decimals > 21) {
@@ -558,35 +504,35 @@ class NeuralNetwork {
             clog('Layers:');
 
             this.Layers.forEach((e, i) => {
-                console.log(`\t${i ? 'output Layer:' : 'input Layer:'}\t${e.size}\t${i ? `(${e.actname})` : ''}`)
-                if (options.layers) console.log(this.Layers[i]);
+                clog(`\t${i === 0 ? 'Input Layer:' : i === this.Layers.length - 1 ? 'Output Layer:' : 'Hidden Layer:'}\t${e.size}\t${i ? `(${e.actname})` : ''}`)
+                if (options.layers) clog(this.Layers[i]);
             })
         }
         if (options.weights) {
-            console.log('Weights:');
+            clog('Weights:');
             this.weights.forEach(e => e.log({ decimals: options.decimals, table: options.table }))
         }
         if (options.biases) {
-            console.log('Biases:');
+            clog('Biases:');
             this.biases.forEach(e => e.log({ decimals: options.decimals, table: options.table }))
         }
         if (options.errors) {
-            console.log('Errors:');
+            clog('Errors:');
             this.errors.forEach(e => e.log({ decimals: options.decimals, table: options.table }))
         }
         if (options.gradients) {
-            console.log('Gradients:');
+            clog('Gradients:');
             this.gradients.forEach(e => e.log({ decimals: options.decimals, table: options.table }))
         }
         if (options.misc) {
-            console.log('Other Values: ');
-            console.log(`\tLearning rate:\t${this.learningRate}`);
-            console.log(`\tLoss Function:\t${this.lossfunc_s}`);
-            console.log(`\tCurrent Epoch:\t${(this.epoch).toLocaleString()}`);
-            console.log(`\tLatest Loss:\t${this.loss}`);
+            clog('Other Values: ');
+            clog(`\tLearning Rate:\t${this.learningRate}`);
+            clog(`\tLoss Function:\t${this.lossfuncName}`);
+            clog(`\tCurrent Epoch:\t${(this.epoch).toLocaleString()}`);
+            clog(`\tLatest Loss:\t${this.loss}`);
             this.print(`---------------------------`);
         }
-        console.log('\n');
+        clog('\n');
         return;
     };
 
@@ -594,7 +540,7 @@ class NeuralNetwork {
         if (option) {
             console.table(v);
         } else {
-            console.log(v);
+            clog(v);
         }
     };
 
@@ -611,6 +557,66 @@ class NeuralNetwork {
         return true;
     };
 
+    checkDropoutRate(dropout) {
+        if (dropout >= 1) {
+            NetworkError.error('The probability value can not be bigger or equal to 1', 'NeuralNetwork.backpropagate');
+            return false;
+        } else if (dropout <= 0) {
+            NetworkError.error('The probability value can not be smaller or equal to 0', 'NeuralNetwork.backpropagate');
+            return false;
+        }
+        return true;
+    };
+
+    addDropout(rate) {
+        if (this.weights.length === 0) {
+            NetworkError.error('You need to initialise weights before using this function, use NetworkError.makeWeights();', 'NetworkError.addDropout');
+            return;
+        }
+
+        let func = (v => Math.floor(Math.random() + (1 - rate)))
+            .toString()
+            .replace(/rate/gm, rate);
+
+        let randomMap = eval(func);
+
+        let inactive = [];
+        for (let i = 0; i < this.Layers.length; i++) {
+            let neuronList = new Array(this.Layers[i].size).fill(1).map(randomMap);
+            inactive.push(neuronList);
+        }
+
+        this.dropout = [];
+        for (let i = 0; i < this.weights.length; i++) {
+            this.dropout.push(
+                new Matrix(this.weights[i].rows, this.weights[i].cols).initiate(1)
+            );
+        }
+
+        for (let i = 0; i < inactive.length; i++) {
+            if (i === 0) {
+                for (let j = 0; j < inactive[i].length; j++) {
+                    if (inactive[i][j] === 0) {
+                        this.dropout[i].fillCol(j, 0);
+                    }
+                }
+            } else if (i === inactive.length - 1) {
+                for (let j = 0; j < inactive[i].length; j++) {
+                    if (inactive[i][j] === 0) {
+                        this.dropout[i - 1].fillRow(j, 0);
+                    }
+                }
+            } else {
+                for (let j = 0; j < inactive[i].length; j++) {
+                    if (inactive[i][j] === 0) {
+                        this.dropout[i - 1].fillRow(j, 0);
+                        this.dropout[i].fillCol(j, 0);
+                    }
+                }
+            }
+        }
+    };
+
     fromJSON(data) {
         this.i = data.architecture[0];
         this.o = data.architecture[data.architecture.length - 1];
@@ -624,8 +630,8 @@ class NeuralNetwork {
         data.errors.map((e, i) => this.errors[i].set(e))
         data.gradients.map((e, i) => this.gradients[i].set(e))
 
-        this.lossfunc = lossfuncs.mse;
-        this.lossfunc_s = data.lossFunction;
+        this.lossfunc = lossfuncs[data.lossFunction];
+        this.lossfuncName = data.lossFunctionName;
         this.outs = Matrix.toArray(this.Layers[this.Layers.length - 1].layer);
         this.loss = data.latestLoss;
         this.learningRate = data.learningRate;
@@ -640,7 +646,8 @@ class NeuralNetwork {
             architecture: this.architecture,
             epoch: this.epoch,
             learningRate: this.learningRate,
-            lossFunction: this.lossfunc_s,
+            lossFunction: this.lossfunc.name,
+            lossFunctionName: this.lossfuncName,
             latestLoss: this.loss,
             percentile: this.percentile,
             layers: this.Layers.map(e => e),
@@ -655,7 +662,7 @@ class NeuralNetwork {
         const model = new NeuralNetwork();
         model.fromJSON(JSON);
         if (options) {
-            console.log('Network created from JSON', JSON)
+            clog('Network created from JSON', JSON)
         }
         return model;
     }
@@ -798,14 +805,14 @@ const XORDemo = () => {
         }
     ];
 
+    clog('%cXOR Gate Demo', 'padding: 0.2em; font-size: 2em;');
     const nn = new NeuralNetwork(2, 1);
-    nn.addHiddenLayer(6, 'tanH');
-    nn.outputActivation('sigmoid');
+    nn.addHiddenLayer(6, actFunc.tanH);
+    nn.outputActivation(actFunc.sigmoid);
     nn.makeWeights();
     clog('%c📉 Before Training', 'padding: 0.2em; font-size: 2em; background: #FF6E6E;');
     nn.exhibition(dataset);
     nn.train(5000, dataset);
-    clog('\n');
     clog('%c📈 After Training', 'padding: 0.2em; font-size: 2em; background: #3BFF72;');
     nn.exhibition(dataset);
     nn.log();
