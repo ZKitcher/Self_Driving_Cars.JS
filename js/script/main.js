@@ -1,13 +1,3 @@
-//const dataset = makeXOR(2);
-
-// const nn = new NeuralNetwork(1, 1);
-// nn.addHiddenLayer(12, 'tanH');
-// nn.addHiddenLayer(6, 'tanH');
-// nn.outputActivation('sigmoid');
-// nn.makeWeights();
-// nn.train(5000, dataset);
-// nn.exhibition(dataset)
-// nn.log();
 
 let cars;
 let racetrack;
@@ -17,7 +7,8 @@ let target;
 function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
     racetrack = new RaceTrack();
-    cars = new Population(Car, 100);
+    cars = new Population(Car, 100)
+
     // cars.eliteAgents = 5;
 
     // cars = new Car()

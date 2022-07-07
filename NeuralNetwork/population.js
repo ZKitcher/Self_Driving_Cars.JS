@@ -1,11 +1,11 @@
 class Population {
-    constructor(constructor, popSize = 25, mutationRate = 0.05) {
+    constructor(constructor, popSize = 25) {
         this.agents = [];
         this.popSize = popSize;
         this.matingPool = [];
         this.datacollection = []
         this.generation = 1;
-        this.mutationRate = mutationRate;
+        this.mutationRate = 0.05;
         this.constructor = constructor;
         this.timerCount = 30;
         this.timer = this.timerCount;
@@ -86,18 +86,10 @@ class Population {
             if (e === this.topAgent || i < this.eliteAgents + 1) {
                 newBrain = e.brain.copy()
             } else {
-                // let coinflip = random(0, 1)
-                // newBrain = coinflip > 0.5
-                //     ? NeuralNetwork
-                //         .mergeNetworks(
-                //             random(this.matingPool).brain.copy(),
-                //             random(this.matingPool).brain.copy()
-                //         )
-                //     : random(this.matingPool).brain.copy();
                 newBrain = NeuralNetwork
                     .mergeNetworks(
-                        random(this.matingPool).brain.copy(),
-                        random(this.matingPool).brain.copy()
+                        rand(this.matingPool).brain.copy(),
+                        rand(this.matingPool).brain.copy()
                     )
                 newBrain.mutateRandom(newBrain.learningRate, this.mutationRate);
             }
@@ -122,6 +114,11 @@ class Population {
                 target: target instanceof Array ? target : [target]
             }
         );
+    }
+
+    setTimer(time) {
+        this.timerCount = time;
+        this.timer = time;
     }
 
     downloadDataset(title = 'Dataset') {

@@ -404,9 +404,8 @@ class NeuralNetwork {
             out = out.map((x) => round(x * dec) / dec);
         }
 
-        if (options.log === true) {
-            this.print('Prediction: ');
-            this.print(out, options.table);
+        if (options.log) {
+            clog('Prediction: ', out);
         }
         return out;
     };
@@ -416,9 +415,9 @@ class NeuralNetwork {
     };
 
     feed(input) {
-        this.print('Inputs: ');
-        this.print(input);
-        return this.feedForward(input, { log: true, decimals: 3 });
+        clog('Inputs: ', input);
+        this.feedForward(input, { log: true, decimals: 3 });
+        this.print('---------------------------')
     }
 
     exhibition(dataset) {
@@ -430,12 +429,10 @@ class NeuralNetwork {
         })
 
         dataset.forEach(e => {
-            this.feedForward(e.input, { log: true, decimals: 3 });
-            if (e.target) {
-                this.print('Expected: ')
-                this.print(e.target)
-            }
-            this.print('---------------------------')
+            clog('🔢 Inputs:\t\t', e.input);
+            if (e.target) clog('🎯 Target:\t\t', e.target)
+            clog('🔮 Prediction:\t', this.feedForward(e.input, { log: false, decimals: 3 }))
+            clog('---------------------------')
         });
     }
 
@@ -557,8 +554,8 @@ class NeuralNetwork {
             this.makeWeights();
         }
         if (options.struct) {
-            console.log('🧠 Network:');
-            console.log('Layers:');
+            clog('%c🧠 Network:', 'padding: 0.2em; font-size: 2em;');
+            clog('Layers:');
 
             this.Layers.forEach((e, i) => {
                 console.log(`\t${i ? 'output Layer:' : 'input Layer:'}\t${e.size}\t${i ? `(${e.actname})` : ''}`)
@@ -613,7 +610,6 @@ class NeuralNetwork {
         }
         return true;
     };
-
 
     fromJSON(data) {
         this.i = data.architecture[0];
@@ -780,4 +776,37 @@ const download = (title, data) => {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
+}
+
+const XORDemo = () => {
+    const dataset = [
+        {
+            input: [0, 0],
+            target: [0]
+        },
+        {
+            input: [1, 1],
+            target: [0]
+        },
+        {
+            input: [0, 1],
+            target: [1]
+        },
+        {
+            input: [1, 0],
+            target: [1]
+        }
+    ];
+
+    const nn = new NeuralNetwork(2, 1);
+    nn.addHiddenLayer(6, 'tanH');
+    nn.outputActivation('sigmoid');
+    nn.makeWeights();
+    clog('%c📉 Before Training', 'padding: 0.2em; font-size: 2em; background: #FF6E6E;');
+    nn.exhibition(dataset);
+    nn.train(5000, dataset);
+    clog('\n');
+    clog('%c📈 After Training', 'padding: 0.2em; font-size: 2em; background: #3BFF72;');
+    nn.exhibition(dataset);
+    nn.log();
 }
