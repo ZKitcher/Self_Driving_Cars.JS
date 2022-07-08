@@ -73,7 +73,7 @@ class RaceTrack {
             },
         ]
 
-        let chosen = random(tracks)
+        let chosen = tracks[1];//random(tracks)
 
         chosen.checkPoints.forEach(e => this.addCheckpoint(e[0], e[1]))
 

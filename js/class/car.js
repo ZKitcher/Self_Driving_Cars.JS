@@ -20,6 +20,7 @@ class Car extends NEATMLObject {
 
         this.laps = 0;
         this.checkpoint = []
+        this.avgSpeed = []
 
         this.checkpointTimer = 180;
 
@@ -50,7 +51,7 @@ class Car extends NEATMLObject {
         if (this.siteDistances.filter(e => e < 10).length) {
             this.failed = true;
             this.done = true;
-            this.fitness /= 1.5
+            this.score *= 0.75
             return;
         }
         // if (this.checkpointTimer === 0) {
@@ -60,18 +61,27 @@ class Car extends NEATMLObject {
         //     return;
         // }
 
-        if (this.currentAccel < 0.5 || this.fitness < 0) {
+        if (this.currentAccel < 0.5) {
             if (this.timeAlive > 10) {
                 this.failed = true;
                 this.done = true;
-                this.fitness = 0
+                this.score *= 0
                 return;
             }
         }
 
+        if (this.currentAccel < 2) {
+            this.score--;
+        }
+
+        this.score++;
+
         // this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * ((1800 - this.timeAlive) / 5);
-        // this.fitness += this.timeAlive * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * (this.checkpointTimer / 150);
-        this.fitness += this.timeAlive * (this.checkpointTimer / 150);
+        // this.fitness += this.timeAlive * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length));
+        // this.score += this.timeAlive * (this.checkpointTimer < 0 ? -0.1 : 1);
+
+
+        this.avgSpeed.push(this.currentAccel)
 
         if (keyIsDown(UP_ARROW)) {
             cars.currentAccel += 0.1;
@@ -126,6 +136,15 @@ class Car extends NEATMLObject {
             .mult(0);
     }
 
+    calculateFitness() {
+        this.fitness = this.score * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length));
+
+        if (this.failed === false) {
+            this.fitness *= avg(this.avgSpeed);
+            // this.fitness *= this.checkpointTimer / 150;
+        }
+    }
+
     checkPointCheck() {
         let checkpointIndex = this.checkpoint.length;
         let next = racetrack.checkPoints[checkpointIndex]
@@ -145,7 +164,7 @@ class Car extends NEATMLObject {
         ) {
             this.failed = true;
             this.done = true;
-            this.fitness = 0;
+            this.score = 0;
         }
 
         if (racetrack.checkPoints.length === this.checkpoint.length) {
