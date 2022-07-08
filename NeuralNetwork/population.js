@@ -164,16 +164,6 @@ let showBest = true;
 
 class NEATPopulation {
     constructor(constructor, popSize = 25) {
-        this.population = [];
-        this.bestPlayer;
-        this.bestFitness = 0;
-
-        this.generation = 0;
-        this.matingPool = [];
-
-
-        //CONVERT NEAT POP TO OG POP.
-
         this.agents = [];
         this.popSize = popSize;
         this.matingPool = [];
@@ -212,103 +202,142 @@ class NEATPopulation {
         this.render()
     }
 
-    done() {
-        for (let i = 0; i < this.population.length; i++) {
-            if (!this.population[i].dead) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     evaluate() {
-        this.calculateFitness();
+        let max = -Infinity;
+        let min = Infinity;
+        let topAgent;
+        this.matingPool = [];
+
+        this.agents.forEach(e => {
+            if (e.fitness > max) {
+                max = e.fitness;
+                topAgent = e;
+                this.topAgent = e;
+                this.topAgent.brain.id = "BestGenome";
+                this.topAgent.brain.draw();
+            }
+            if (e.fitness < min) min = e.fitness;
+        })
 
         let averageSum = this.getAverageScore();
         console.log(averageSum);
-        let children = [];
+
+        this.agents.forEach(e => e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10)
 
         this.fillMatingPool();
-        for (let i = 0; i < this.population.length; i++) {
-            let parent1 = this.selectPlayer();
-            let parent2 = this.selectPlayer();
-            if (parent1.fitness > parent2.fitness)
-                children.push(parent1.crossover(parent2));
-            else
-                children.push(parent2.crossover(parent1));
-        }
 
-
-        this.population.splice(0, this.population.length);
-        this.population = children.slice(0);
-        this.generation++;
-        this.population.forEach((element) => {
-            element.brain.generateNetwork();
-        });
-
-        console.log("Generation " + this.generation);
-
-        this.bestPlayer.lifespan = 0;
-        this.bestPlayer.dead = false;
-        this.bestPlayer.score = 1;
+        this.selection()
     }
 
-    calculateFitness() {
-        let currentMax = 0;
-        this.population.forEach((element) => {
-            element.calculateFitness();
-            if (element.fitness > this.bestFitness) {
-                this.bestFitness = element.fitness;
-                this.bestPlayer = element.clone();
-                this.bestPlayer.brain.id = "BestGenome";
-                this.bestPlayer.brain.draw();
+    selection() {
+        let children = [];
+
+        this.agents.sort((a, b) => b.fitness - a.fitness).forEach((e, i) => {
+
+            let nextGen;
+
+            let newChild = new this.constructor();
+
+            if (e === this.topAgent || i < this.eliteAgents + 1) {
+                nextGen = e.clone()
+            } else {
+                let parent1 = this.selectPlayer();
+                let parent2 = this.selectPlayer();
+                if (parent1.fitness > parent2.fitness) {
+                    nextGen = parent1.crossover(parent2);
+                } else {
+                    nextGen = parent2.crossover(parent1);
+                }
+            }
+            newChild.passDown(nextGen.brain);
+
+
+            if (e === this.topAgent) {
+                newChild.topAgent = true;
+            } else if (i < this.eliteAgents) {
+                newChild.eliteAgent = true;
             }
 
-            if (element.fitness > currentMax)
-                currentMax = element.fitness;
-        });
+            children.push(newChild)
+        })
 
-        //Normalize
-        this.population.forEach((element, elementN) => {
-            element.fitness /= currentMax;
+        this.agents = children;
+        this.generation++;
+
+        console.log(this.agents)
+
+        this.agents.forEach((e) => {
+            e.brain.generateNetwork();
         });
     }
 
     fillMatingPool() {
-        this.matingPool.splice(0, this.matingPool.length);
-        this.population.forEach((element, elementN) => {
-            let n = element.fitness * 100;
-            for (let i = 0; i < n; i++)
-                this.matingPool.push(elementN);
+        this.matingPool = [];
+        this.agents.forEach((e, index) => {
+            let n = e.fitness * 100;
+            for (let i = 0; i < n; i++) {
+                this.matingPool.push(index);
+            }
         });
     }
 
     selectPlayer() {
-        let rand = Math.floor(Math.random() * this.matingPool.length);
-        return this.population[this.matingPool[rand]];
+        return this.agents[rand(this.matingPool)]
     }
 
     getAverageScore() {
         let avSum = 0;
-        this.population.forEach((element) => {
-            avSum += element.score;
+        this.agents.forEach((e) => {
+            avSum += e.fitness;
         });
 
-        return avSum / this.population.length;
+        return avSum / this.agents.length;
+    }
+
+    collectData(input, target) {
+        this.datacollection.push(
+            {
+                input: input instanceof Array ? input : [input],
+                target: target instanceof Array ? target : [target]
+            }
+        );
+    }
+
+    setTimer(time) {
+        this.timerCount = time;
+        this.timer = time;
+    }
+
+    downloadDataset(title = 'Dataset') {
+        download(title, JSON.stringify(this.datacollection));
+    }
+
+    render() {
+        push();
+        fill(255, 255, 255);
+        text(this.generation, 10, 15);
+        text(this.timer, width - 20, 15);
+
+        // if (this.topAgent)
+        // this.topAgent.brain.show()
+
+        pop();
+    }
+
+    reset() {
+        this.evaluate()
+        this.timer = this.timerCount
     }
 }
 
-class Player {
+class NEATMLObject {
     constructor(id) {
-        this.brain = new NEATGenome(genomeInputsN, genomeOutputN, id);
-
-        // this.score = 1;
-        // this.lifespan = 0;
-        // this.dead = false;
-        // this.decisions = [];
-        // this.vision = [];
-
+        if (typeof createMLObjectBrain !== 'undefined') {
+            this.brain = createMLObjectBrain(id);
+        } else {
+            NetworkError.error('createMLObjectBrain() needed to create a neural netword for the MLObject.', 'MLObject.constructor');
+            return;
+        }
         this.failed = false;
         this.success = false;
         this.done = false;
@@ -318,14 +347,19 @@ class Player {
         this.prediction;
     }
 
+    passDown(brain) {
+
+        this.brain = brain;
+    }
+
     clone() {
-        let clone = new Player();
+        let clone = new NEATMLObject();
         clone.brain = this.brain.clone();
         return clone;
     }
 
     crossover(parent) {
-        let child = new Player();
+        let child = new NEATMLObject();
         if (parent.fitness < this.fitness)
             child.brain = this.brain.crossover(parent.brain);
         else

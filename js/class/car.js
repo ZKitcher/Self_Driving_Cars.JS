@@ -1,6 +1,6 @@
-class Car extends MLObject {
-    constructor(brain) {
-        super(brain);
+class Car extends NEATMLObject {
+    constructor(id) {
+        super(id);
         this.acceleration = createVector(0, 0);
         this.velocity = createVector(0, 0);
         this.position = createVector(150, 200);
@@ -60,7 +60,7 @@ class Car extends MLObject {
         //     return;
         // }
 
-        if (this.currentAccel < 0.5) {
+        if (this.currentAccel < 0.5 || this.fitness < 0) {
             if (this.timeAlive > 10) {
                 this.failed = true;
                 this.done = true;
@@ -165,7 +165,8 @@ class Car extends MLObject {
         inputs.push(this.currentAccel / this.maxspeed)
         inputs.push(this.carSteering / 0.2)
 
-        this.prediction = this.brain.predict(inputs)
+        // this.prediction = this.brain.predict(inputs)
+        this.prediction = this.brain.feedForward(inputs)
 
         this.currentAccel += this.prediction[0] * 0.1 * (this.prediction[0] < 0.5 ? -1 : 1)
         this.carSteering += this.prediction[1] * 0.05 * (this.prediction[1] < 0.5 ? -1 : 1)

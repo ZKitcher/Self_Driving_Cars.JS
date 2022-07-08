@@ -7,7 +7,7 @@ let target;
 function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
     racetrack = new RaceTrack();
-    cars = new Population(Car, 100)
+    cars = new NEATPopulation(Car, 100)
 
     // cars.eliteAgents = 5;
 
@@ -45,13 +45,15 @@ const completedGeneration = () => {
 }
 
 const createMLObjectBrain = () => {
-    let nn = new NeuralNetwork(9, 2);
-    nn.addHiddenLayer(12, 'tanH');
-    nn.addHiddenLayer(6, 'tanH');
-    nn.addHiddenLayer(3, 'tanH');
-    nn.makeWeights();
+    return new NEATGenome(9, 2, rand());
 
-    //nn.learningRate = 0.3
+    // let nn = new NeuralNetwork(9, 2);
+    // nn.addHiddenLayer(12, 'tanH');
+    // nn.addHiddenLayer(6, 'tanH');
+    // nn.addHiddenLayer(3, 'tanH');
+    // nn.makeWeights();
 
-    return nn;
+    // //nn.learningRate = 0.3
+
+    // return nn;
 }

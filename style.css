@@ -11,3 +11,9 @@ body {
 canvas {
     display: block;
 }
+
+#svgContainer {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}
