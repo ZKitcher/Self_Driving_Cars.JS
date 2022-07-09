@@ -70,10 +70,6 @@ class Car extends NEATMLObject {
             }
         }
 
-        if (this.currentAccel < 2) {
-            this.score--;
-        }
-
         this.score++;
 
         // this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * ((1800 - this.timeAlive) / 5);
@@ -138,11 +134,8 @@ class Car extends NEATMLObject {
 
     calculateFitness() {
         this.fitness = this.score * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length));
-
-        if (this.failed === false) {
-            this.fitness *= avg(this.avgSpeed);
-            // this.fitness *= this.checkpointTimer / 150;
-        }
+        this.fitness *= this.checkpointTimer / 150 < 1 ? 0.9 : 1;
+        this.fitness *= avg(this.avgSpeed);
     }
 
     checkPointCheck() {
