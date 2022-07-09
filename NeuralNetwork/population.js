@@ -237,29 +237,19 @@ class NEATPopulation {
         let children = [];
 
         this.agents.forEach((e, i) => {
+            let newChild = new this
+                .constructor(
+                    e === this.topAgent || i < this.eliteAgents + 1 ?
+                        e.brain.clone() :
+                        NEATMLObject
+                            .crossover(
+                                this.selectAgent(),
+                                this.selectAgent()
+                            )
+                );
 
-            let newBrain;
 
-            if (e === this.topAgent || i < this.eliteAgents + 1) {
-                newBrain = e.brain.clone();
-            } else {
-
-                let parent1 = this.selectAgent();
-                let parent2 = this.selectAgent();
-
-                if (parent1 === parent2) {
-                    parent1 = this.selectAgent();
-                    parent2 = this.selectAgent();
-                }
-
-                if (parent1.fitness > parent2.fitness) {
-                    newBrain = parent1.crossover(parent2);
-                } else {
-                    newBrain = parent2.crossover(parent1);
-                }
-            }
-
-            let newChild = new this.constructor(newBrain);
+            newChild.brain.generateNetwork()
 
             if (e === this.topAgent) {
                 newChild.topAgent = true;
@@ -271,10 +261,8 @@ class NEATPopulation {
         })
 
         this.agents = children;
+        // this.agents.forEach(e => e.brain.generateNetwork());
         this.generation++;
-        this.agents.forEach((e) => {
-            e.brain.generateNetwork();
-        });
     }
 
     fillMatingPool() {
@@ -358,31 +346,9 @@ class NEATMLObject {
         this.eliteAgent = false;
         this.fitness = 0;
         this.score = 0;
-        this.prediction;
     }
 
-    passDown(brain) {
-        this.brain = brain;
-    }
-
-    clone() {
-        let clone = new NEATMLObject();
-        clone.brain = this.brain.clone();
-        return clone;
-    }
-
-    crossover(parent) {
-        let brain;
-        if (parent.fitness < this.fitness)
-            brain = this.brain.crossover(parent.brain);
-        else
-            brain = parent.brain.crossover(this.brain);
-
-        brain.mutate()
-        return brain;
-    }
-
-    static mergeNetworks(parent1, parent2) {
+    static crossover(parent1, parent2) {
         let brain;
         if (parent1.fitness > parent2.fitness) {
             brain = parent1.brain.crossover(parent2.brain);
