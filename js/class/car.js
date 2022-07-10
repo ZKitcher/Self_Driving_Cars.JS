@@ -70,7 +70,9 @@ class Car extends NEATMLObject {
             }
         }
 
-        this.score++;
+
+        this.score += this.checkpointTimer > 0 ? 1 : 0;
+        // this.score++;
 
         // this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * ((1800 - this.timeAlive) / 5);
         // this.fitness += this.timeAlive * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length));
@@ -133,9 +135,11 @@ class Car extends NEATMLObject {
     }
 
     calculateFitness() {
-        this.fitness = this.score * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length));
-        this.fitness *= this.checkpointTimer / 150 < 1 ? 0.9 : 1;
-        this.fitness *= avg(this.avgSpeed);
+        this.fitness = this.score;
+        this.fitness *= 1 + (avg(this.avgSpeed) / this.maxspeed);
+        this.fitness *= ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * 10;
+
+        // this.fitness *= this.checkpointTimer / 150 < 1 ? 0.9 : 1;
     }
 
     checkPointCheck() {
@@ -149,7 +153,7 @@ class Car extends NEATMLObject {
             && this.position.x < next.position.x + 50 && this.position.y < next.position.y + 50
         ) {
             this.checkpoint.push(checkpointIndex + 1)
-            this.checkpointTimer += 150;
+            this.checkpointTimer = 150;
         }
 
         if (prev && this.position.x > prev.position.x - 50 && this.position.y > prev.position.y - 50
@@ -164,7 +168,7 @@ class Car extends NEATMLObject {
             this.checkpoint = [];
             this.laps++;
             console.log('LAP COMPLETED!', this.laps)
-            this.checkpointTimer += 150;
+            this.checkpointTimer = 150;
         }
     }
 
@@ -180,8 +184,8 @@ class Car extends NEATMLObject {
         // this.prediction = this.brain.predict(inputs)
         this.prediction = this.brain.feedForward(inputs)
 
-        this.currentAccel += this.prediction[0] * 0.1 * (this.prediction[0] < 0.5 ? -1 : 1)
-        this.carSteering += this.prediction[1] * 0.05 * (this.prediction[1] < 0.5 ? -1 : 1)
+        this.currentAccel += this.prediction[0] * 0.1;
+        this.carSteering += this.prediction[1] * 0.05;
 
     }
 
