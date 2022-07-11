@@ -58,7 +58,8 @@ class Population {
         this.agents.sort((a, b) => b.fitness - a.fitness).forEach((e, i) => {
             e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))) * 10;
             if (i < this.popSize / 5) {
-                let n = e.completed || e === topAgent ? e.fitness *= 2 : e.fitness
+                // let n = e.completed || e === topAgent ? e.fitness *= 2 : e.fitness
+                let n = e.completed ? e.fitness *= 2 : e.fitness
 
                 for (let i = 0; i < n; i++) {
                     this.matingPool.push(e);
@@ -171,15 +172,15 @@ class NEATPopulation {
         this.agents = [];
         this.popSize = popSize;
         this.matingPool = [];
-        this.datacollection = []
+        this.datacollection = [];
         this.generation = 1;
         this.mutationRate = 0.05;
         this.constructor = constructor;
         this.timerCount = 30;
         this.timer = this.timerCount;
 
-        this.topAgent = null
-        this.eliteAgents = 3
+        this.topAgent = null;
+        this.eliteAgents = 5;
 
         for (let i = 0; i < this.popSize; i++) {
             this.agents.push(new this.constructor(i))
@@ -209,19 +210,15 @@ class NEATPopulation {
     evaluate() {
         let max = -Infinity;
         let min = Infinity;
-        let topAgent;
         this.matingPool = [];
 
         this.agents.forEach(e => {
-
             e.calculateFitness()
 
             if (e.fitness > max) {
                 max = e.fitness;
-                topAgent = e;
                 this.topAgent = e;
                 this.topAgent.brain.id = "BestGenome";
-                this.topAgent.brain.draw();
             }
             if (e.fitness < min) min = e.fitness;
         })
@@ -229,6 +226,8 @@ class NEATPopulation {
         this.agents.forEach(e => e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))))
 
         this.fillMatingPool();
+
+        this.topAgent.brain.draw();
 
         this.selection()
     }
@@ -239,7 +238,7 @@ class NEATPopulation {
         this.agents.forEach((e, i) => {
             let newChild = new this
                 .constructor(
-                    e === this.topAgent || i < this.eliteAgents + 1 ?
+                    i < this.eliteAgents + 1 ?
                         e.brain.clone() :
                         NEATMLObject
                             .crossover(
@@ -247,8 +246,7 @@ class NEATPopulation {
                                 this.selectAgent()
                             )
                 );
-
-
+            
             newChild.brain.generateNetwork()
 
             if (e === this.topAgent) {
@@ -261,7 +259,6 @@ class NEATPopulation {
         })
 
         this.agents = children;
-        // this.agents.forEach(e => e.brain.generateNetwork());
         this.generation++;
     }
 
@@ -271,10 +268,13 @@ class NEATPopulation {
         this.agents
             .sort((a, b) => b.fitness - a.fitness)
             .forEach((e, index) => {
-                if (e.fitness >= average) {
-                    let n = e.fitness * 100;
-                    for (let i = 0; i < n; i++) {
-                        this.matingPool.push(index);
+                if (!e.topAgent && !e.eliteAgent) {
+                    if (e.fitness >= average) {
+                        let n = e.fitness * 100;
+                        for (let i = 0; i < n; i++) {
+                            this.matingPool.push(index);
+
+                        }
                     }
                 }
             });

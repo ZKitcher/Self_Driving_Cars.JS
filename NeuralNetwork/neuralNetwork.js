@@ -47,6 +47,19 @@ const actFunc = {
     leakyrelucapped: 'leakyrelucapped',
     leakysigmoid: 'leakysigmoid',
 }
+const actFuncNames = [
+    'sigmoid',
+    'silu',
+    'tanh',
+    'leakyrelu',
+    'relu',
+    'sinc',
+    'softsign',
+    'binary',
+    'softplus',
+    'leakyrelucapped',
+    'leakysigmoid',
+]
 
 const lossFunctions = {
     MeanSquareError: lossfuncs.mse,
@@ -769,7 +782,7 @@ class NEATConnection {
     }
 
     mutateWeight() {
-        rand() < 0.05 ? this.weight = rand(-1, 1) : this.weight += randomGaussian() / 50;
+        rand() < 0.05 ? this.weight = rand(-1, 1) : this.weight += rand(-0.1, 0.1);
     }
 
     clone() {
@@ -783,13 +796,11 @@ class NEATConnection {
     }
 }
 
-var activationsNames = ['Sigmoid', 'Identity', 'Step', 'Tanh', 'ReLu'];
-
 class NEATNode {
     constructor(num, lay, isOutput) {
         this.number = num;
         this.layer = lay;
-        this.activationFunction = floor(rand(0, 5));
+        this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
         this.bias = rand(-1, 1);
         this.output = isOutput || false;
 
@@ -799,23 +810,23 @@ class NEATNode {
     }
 
     engage() {
-        if (this.layer != 0) {
-            this.outputValue = this.activation(this.inputSum + this.bias);
+        if (this.layer !== 0) {
+            this.outputValue = activations[this.activation](this.inputSum + this.bias);
         }
 
-        this.outputConnections.forEach((conn) => {
-            if (conn.enabled) {
-                conn.toNode.inputSum += conn.weight * this.outputValue;
+        this.outputConnections.forEach(e => {
+            if (e.enabled) {
+                e.toNode.inputSum += e.weight * this.outputValue;
             }
         });
     }
 
     mutateBias() {
-        rand() < 0.05 ? this.bias = rand(-1, 1) : this.bias += randomGaussian() / 50;
+        rand() < 0.05 ? this.bias = rand(-1, 1) : this.bias += rand(-0.1, 0.1);
     }
 
     mutateActivation() {
-        this.activationFunction = floor(rand(0, 5));
+        this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
     }
 
     isConnectedTo(node) {
@@ -824,12 +835,12 @@ class NEATNode {
         }
 
         if (node.layer < this.layer) {
-            node.outputConnections.forEach((conn) => {
-                if (conn.toNode == this) return true;
+            node.outputConnections.forEach(e => {
+                if (e.toNode == this) return true;
             });
         } else {
-            this.outputConnections.forEach((conn) => {
-                if (conn.toNode == node) return true;
+            this.outputConnections.forEach(e => {
+                if (e.toNode == node) return true;
             });
         }
 
@@ -839,25 +850,8 @@ class NEATNode {
     clone() {
         let node = new NEATNode(this.number, this.layer, this.output);
         node.bias = this.bias;
-        node.activationFunction = this.activationFunction;
+        node.activation = this.activation;
         return node;
-    }
-
-    activation(x) {
-        switch (this.activationFunction) {
-            case 0: //Sigmoid
-                return 1 / (1 + Math.pow(Math.E, -4.9 * x));
-            case 1: //Identity
-                return x;
-            case 2: //Step
-                return x > 0 ? 1 : 0;
-            case 3: //Tanh
-                return Math.tanh(x);
-            case 4: //ReLu
-                return x < 0 ? 0 : x;
-            default: //Sigmoid
-                return 1 / (1 + Math.pow(Math.E, -4.9 * x));
-        }
     }
 }
 
@@ -871,6 +865,15 @@ class NEATGenome {
 
         this.nodes = [];
         this.connections = [];
+
+        this.mutRates = {
+            connectionRate: rand(0.4, 0.5),
+            biasRate: rand(0.4, 0.5),
+            activationRate: rand(0.05, 0.1),
+            addConnectionRate: rand(0.05, 0.1),
+            addNodeRate: rand(0.01, 0.3),
+            mutationRate: rand(0.01, 100)
+        }
 
         if (!offSpring) {
             for (let i = 0; i < this.inputs; i++) {
@@ -886,7 +889,7 @@ class NEATGenome {
 
             for (let i = 0; i < this.inputs; i++) {
                 for (let j = this.inputs; j < this.outputs + this.inputs; j++) {
-                    let weight = Math.random() * this.inputs * Math.sqrt(2 / this.inputs);
+                    let weight = rand(-1, 1);
                     this.connections.push(new NEATConnection(this.nodes[i], this.nodes[j], weight));
                 }
             }
@@ -894,16 +897,13 @@ class NEATGenome {
     }
 
     generateNetwork() {
-        // this.nodes.forEach((node) => {
-        //     node.outputConnections.splice(0, node.outputConnections.length);
-        // });
-
-        // this.connections.forEach((conn) => {
-        //     conn.fromNode.outputConnections.push(conn);
-        // });
         this.nodes.forEach(e => e.outputConnections = []);
         this.connections.forEach(e => e.fromNode.outputConnections.push(e));
         this.sortByLayer();
+    }
+
+    predict(inputs) {
+        return this.feedForward(inputs)
     }
 
     feedForward(inputValues) {
@@ -926,97 +926,102 @@ class NEATGenome {
     crossover(partner) {
         //TODO: find a good way to generate unique ids
         let offSpring = new NEATGenome(this.inputs, this.outputs, 0, true);
-        offSpring.nextNode = this.nextNode;
 
         for (let i = 0; i < this.nodes.length; i++) {
             let node = this.nodes[i].clone();
             if (node.output) {
                 let partnerNode = partner.nodes[partner.getNode(node.number)];
                 if (rand() > 0.5) {
-                    node.activationFunction = partnerNode.activationFunction;
+                    node.activation = partnerNode.activation;
                     node.bias = partnerNode.bias;
                 }
             }
             offSpring.nodes.push(node);
         }
 
-        for (let i = 0; i < this.connections.length; i++) {
-            let index = this.commonConnection(this.connections[i].getInnovationNumber(), partner.connections);
+        this.connections.forEach(e => {
+            let index = this.commonConnection(e.getInnovationNumber(), partner.connections);
 
-            if (index != -1) {
-                let conn = Math.random() > 0.5 ? this.connections[i].clone() : partner.connections[index].clone();
+            let conn = index != -1
+                ? rand() > 0.5 ? e.clone() : partner.connections[index].clone()
+                : e.clone();
 
-                let fromNode = offSpring.nodes[offSpring.getNode(conn.fromNode.number)];
-                let toNode = offSpring.nodes[offSpring.getNode(conn.toNode.number)];
-                conn.fromNode = fromNode;
-                conn.toNode = toNode;
+            conn.fromNode = offSpring.nodes[offSpring.getNode(conn.fromNode.number)];
+            conn.toNode = offSpring.nodes[offSpring.getNode(conn.toNode.number)];
 
-                if (fromNode && toNode) offSpring.connections.push(conn);
-            } else {
-                let conn = this.connections[i].clone();
+            if (conn.fromNode && conn.toNode) offSpring.connections.push(conn);
+        })
 
-                let fromNode = offSpring.nodes[offSpring.getNode(conn.fromNode.number)];
-                let toNode = offSpring.nodes[offSpring.getNode(conn.toNode.number)];
-                conn.fromNode = fromNode;
-                conn.toNode = toNode;
-
-                if (fromNode && toNode) offSpring.connections.push(conn);
-            }
-        }
+        let p1 = this.mutRates;
+        let p2 = partner.mutRates;
+        offSpring.mutRates.connectionRate = rand() > 0.5 ? p1.connectionRate : p2.connectionRate;
+        offSpring.mutRates.biasRate = rand() > 0.5 ? p1.biasRate : p2.biasRate;
+        offSpring.mutRates.activationRate = rand() > 0.5 ? p1.activationRate : p2.activationRate;
+        offSpring.mutRates.addConnectionRate = rand() > 0.5 ? p1.addConnectionRate : p2.addConnectionRate;
+        offSpring.mutRates.addNodeRate = rand() > 0.5 ? p1.addNodeRate : p2.addNodeRate;
 
         offSpring.layers = this.layers;
+        offSpring.nextNode = offSpring.nodes.length;
+
         return offSpring;
     }
 
     mutate() {
-        let mut;
+        let rates = this.mutRates;
+        //MOD Connections
 
-        if (rand() < 0.8) { //80%
-            //MOD Connections
-            mut = 'ModConn';
-            // for (var i = 0; i < this.connections.length; i++) {
-            //     this.connections[i].mutateWeight();
-            // }
-            this.connections.forEach(e => e.mutateWeight())
-        }
+        this.connections.forEach(e => {
+            if (rand() < rates.connectionRate) {
+                e.mutateWeight()
+            }
+        })
 
-        if (rand() < 0.5) { //50%
-            //MOD Bias
-            mut = 'ModBias';
-            // for (var i = 0; i < this.nodes.length; i++) {
-            //     this.nodes[i].mutateBias();
-            // }
-            this.nodes.forEach(e => e.mutateBias())
-        }
+        //MOD Bias
+        this.nodes.forEach(e => {
+            if (rand() < rates.biasRate) {
+                e.mutateBias()
+            }
+        })
 
-        if (rand() < 0.1) { //10%
+
+        if (rand() < rates.activationRate) {
             //MOD Node
-            mut = 'ModAct';
-            // let i = Math.floor(rand() * this.nodes.length);
-            // this.nodes[i].mutateActivation();
             this.nodes[floor(rand(this.nodes.length))].mutateActivation();
         }
 
-        if (rand() < 0.05) { //5%
+        if (rand() < rates.addConnectionRate) {
             //ADD Connections
-            mut = 'AddConn';
             this.addConnection();
         }
 
-        if (rand() < 0.01) { //1%
+        if (rand() < rates.addNodeRate) {
             //ADD Node
-            mut = 'AddNode';
             this.addNode();
+        }
+
+        if (rand() < rates.mutationRate) {
+            //ADD Node
+            this.mutateRates();
         }
     }
 
+    mutateRates() {
+        this.mutRates.connectionRate = rand(0.8, 0.9)
+        this.mutRates.biasRate = rand(0.5, 0.6)
+        this.mutRates.activationRate = rand(0.05, 0.1)
+        this.mutRates.addConnectionRate = rand(0.05, 0.1)
+        this.mutRates.addNodeRate = rand(0.01, 0.3)
+        this.mutRates.mutationRate = rand(0.01, 1)
+    }
+
     addNode() {
-        let connectionIndex = Math.floor(rand() * this.connections.length);
+        let connectionIndex = floor(rand(this.connections.length));
         let pickedConnection = this.connections[connectionIndex];
         pickedConnection.enabled = false;
         this.connections.splice(connectionIndex, 1);
 
         let newNode = new NEATNode(this.nextNode, pickedConnection.fromNode.layer + 1);
+
         this.nodes.forEach((node) => {
             if (node.layer > pickedConnection.fromNode.layer) node.layer++;
         });
@@ -1034,12 +1039,12 @@ class NEATGenome {
     addConnection() {
         if (this.fullyConnected()) return;
 
-        let node1 = floor(rand() * this.nodes.length);
-        let node2 = floor(rand() * this.nodes.length);
+        let node1 = floor(rand(this.nodes.length));
+        let node2 = floor(rand(this.nodes.length));
 
         while (this.nodes[node1].layer == this.nodes[node2].layer || this.nodesConnected(this.nodes[node1], this.nodes[node2])) {
-            node1 = floor(rand() * this.nodes.length);
-            node2 = floor(rand() * this.nodes.length);
+            node1 = floor(rand(this.nodes.length));
+            node2 = floor(rand(this.nodes.length));
         }
 
         if (this.nodes[node1].layer > this.nodes[node2].layer) {
@@ -1048,7 +1053,7 @@ class NEATGenome {
             node2 = temp;
         }
 
-        let newConnection = new NEATConnection(this.nodes[node1], this.nodes[node2], rand() * this.inputs * sqrt(2 / this.inputs));
+        let newConnection = new NEATConnection(this.nodes[node1], this.nodes[node2], rand(-1, 1));
         this.connections.push(newConnection);
     }
 
@@ -1136,13 +1141,20 @@ class NEATGenome {
 
         let connections = [];
         this.connections.forEach(conn => {
-            connections.push({ source: this.getNode(conn.fromNode.number), target: this.getNode(conn.toNode.number), weight: conn.weight, enabled: conn.enabled });
+            connections.push(
+                {
+                    source: this.getNode(conn.fromNode.number),
+                    target: this.getNode(conn.toNode.number),
+                    weight: conn.weight,
+                    enabled: conn.enabled
+                }
+            );
         });
 
         let nodes = [];
         this.nodes.forEach(originalNode => {
             let node = originalNode.clone();
-            if (node.layer == 0) {
+            if (node.layer === 0) {
                 node.fixed = true;
                 // node.y = height - (height * 0.2);
                 // node.x = ((width / this.inputs) * node.number) + (width / this.inputs) / 2;
@@ -1163,16 +1175,17 @@ class NEATGenome {
 
         force.nodes(nodes)
             .links(connections)
+            .linkDistance(1)
             .start();
 
-        var link = svg.selectAll('.link')
+        let link = svg.selectAll('.link')
             .data(connections)
             .enter().append('line')
             .attr('class', 'link')
-            .style('stroke-width', function (d) { return d.enabled ? (d.weight > 0 ? d.weight : d.weight * -1) + 0.3 : 0 })
+            .style('stroke-width', function (d) { return d.enabled ? (d.weight > 0 ? d.weight : d.weight * -1) + 0.5 : 0 })
             .style('stroke', function (d) { return d.weight > 0 ? '#0f0' : '#f00'; });
 
-        var node = svg.selectAll('.node')
+        let node = svg.selectAll('.node')
             .data(nodes)
             .enter().append('g')
             .attr('class', 'node')
@@ -1185,11 +1198,11 @@ class NEATGenome {
         node.append('text')
             .attr('dx', -4)
             .attr('dy', 23)
-            // .attr('dy', '.35em')
-            .text(function (d) { return (d.layer > 0 ? '(' + activationsNames[d.activationFunction] + ')' : null) });
+            .text(function (d) { return d.number + (d.layer > 0 ? `: (${d.activation})` : null) });
 
         force.on('tick', function () {
-            link.attr('x1', function (d) { return d.source.x; })
+            link
+                .attr('x1', function (d) { return d.source.x; })
                 .attr('y1', function (d) { return d.source.y; })
                 .attr('x2', function (d) { return d.target.x; })
                 .attr('y2', function (d) { return d.target.y; });

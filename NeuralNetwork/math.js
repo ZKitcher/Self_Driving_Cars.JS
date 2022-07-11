@@ -7,8 +7,16 @@ const round = x => Math.round(x);
 const sqrt = x => Math.sqrt(x);
 const cosh = x => (exp(x) + exp(-x)) / 2;
 const floor = x => Math.floor(x);
+const cos = x => Math.cos(x);
+const PI = Math.PI;
 const isNumber = x => typeof x === 'number';
 const clog = (...arg) => console.log(...arg);
+const boxMuller = () => {
+    let u = 0, v = 0;
+    while (u === 0) u = rand();
+    while (v === 0) v = rand();
+    return Math.sqrt(-1 * log(u)) * cos(1 * PI * v);
+};
 
 class Matrix {
     constructor(rows = 0, cols = 0, matrix = null) {

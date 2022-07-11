@@ -4,7 +4,7 @@ class Car extends NEATMLObject {
         this.acceleration = createVector(0, 0);
         this.velocity = createVector(0, 0);
         this.position = createVector(150, 200);
-        this.maxspeed = 20;
+        this.maxspeed = 10;
 
         this.currentAccel = 0;
         this.carSteering = 0;
@@ -61,18 +61,15 @@ class Car extends NEATMLObject {
         //     return;
         // }
 
-        if (this.currentAccel < 0.5) {
-            if (this.timeAlive > 10) {
-                this.failed = true;
-                this.done = true;
-                this.score *= 0
-                return;
-            }
+        if (this.score < 0 || this.currentAccel < 0.5 && this.timeAlive > 10) {
+            this.failed = true;
+            this.done = true;
+            return;
         }
 
 
-        this.score += this.checkpointTimer > 0 ? 1 : 0;
-        // this.score++;
+        // this.score += this.checkpointTimer > 0 ? 1 : -1;
+        this.score++;
 
         // this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * ((1800 - this.timeAlive) / 5);
         // this.fitness += this.timeAlive * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length));
@@ -108,7 +105,7 @@ class Car extends NEATMLObject {
             cars.carSteering = 0;
         }
 
-        // if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
+        if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
         this.networkPrediction()
 
         if (this.currentAccel < 0) {
@@ -136,8 +133,8 @@ class Car extends NEATMLObject {
 
     calculateFitness() {
         this.fitness = this.score;
-        this.fitness *= 1 + (avg(this.avgSpeed) / this.maxspeed);
-        this.fitness *= ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * 10;
+        this.fitness *= avg(this.avgSpeed);
+        // this.fitness *= ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * 10;
 
         // this.fitness *= this.checkpointTimer / 150 < 1 ? 0.9 : 1;
     }
@@ -173,16 +170,12 @@ class Car extends NEATMLObject {
     }
 
     networkPrediction() {
-
-        let inputs = []
-
-        inputs = this.siteDistances.map(e => e > 300 ? 1 : (e / 300))
+        let inputs = this.siteDistances.map(e => e > 300 ? 1 : (e / 300))
         inputs.pop()
         inputs.push(this.currentAccel / this.maxspeed)
         inputs.push(this.carSteering / 0.2)
 
-        // this.prediction = this.brain.predict(inputs)
-        this.prediction = this.brain.feedForward(inputs)
+        this.prediction = this.brain.predict(inputs)
 
         this.currentAccel += this.prediction[0] * 0.1;
         this.carSteering += this.prediction[1] * 0.05;
