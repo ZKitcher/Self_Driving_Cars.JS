@@ -969,7 +969,6 @@ class NEATGenome {
     mutate() {
         let rates = this.mutRates;
         //MOD Connections
-
         this.connections.forEach(e => {
             if (rand() < rates.connectionRate) {
                 e.mutateWeight()
@@ -982,7 +981,6 @@ class NEATGenome {
                 e.mutateBias()
             }
         })
-
 
         if (rand() < rates.activationRate) {
             //MOD Node
@@ -1042,7 +1040,7 @@ class NEATGenome {
         let node1 = floor(rand(this.nodes.length));
         let node2 = floor(rand(this.nodes.length));
 
-        while (this.nodes[node1].layer == this.nodes[node2].layer || this.nodesConnected(this.nodes[node1], this.nodes[node2])) {
+        while (this.nodes[node1].layer === this.nodes[node2].layer || this.nodesConnected(this.nodes[node1], this.nodes[node2])) {
             node1 = floor(rand(this.nodes.length));
             node2 = floor(rand(this.nodes.length));
         }
@@ -1105,14 +1103,12 @@ class NEATGenome {
         let clone = new NEATGenome(this.inputs, this.outputs, this.id);
         clone.nodes = [...this.nodes];
         clone.connections = [...this.connections];
-        // clone.nodes = this.nodes.slice(0, this.nodes.length);
-        // clone.connections = this.connections.slice(0, this.connections.length);
         return clone;
     }
 
     getNode(x) {
         for (let i = 0; i < this.nodes.length; i++) {
-            if (this.nodes[i].number == x) {
+            if (this.nodes[i].number === x) {
                 return i;
             }
         }
@@ -1156,18 +1152,18 @@ class NEATGenome {
             let node = originalNode.clone();
             if (node.layer === 0) {
                 node.fixed = true;
-                // node.y = height - (height * 0.2);
-                // node.x = ((width / this.inputs) * node.number) + (width / this.inputs) / 2;
-                node.y = ((height / this.inputs) * node.number) + (height / this.inputs) / 2;
-                node.x = (width * 0.2);
+                node.y = height - (height * 0.2);
+                node.x = ((width / this.inputs) * node.number) + (width / this.inputs) / 2;
+                // node.y = ((height / this.inputs) * node.number) + (height / this.inputs) / 2;
+                // node.x = (width * 0.2);
             }
 
             if (node.output) {
                 node.fixed = true;
-                // node.y = (height * 0.2);
-                // node.x = ((width / this.outputs) * (node.number - this.inputs)) + (width / this.outputs) / 2;
-                node.x = width - (width * 0.2);
-                node.y = ((height / this.outputs) * (node.number - this.inputs)) + (height / this.outputs) / 2;
+                node.y = (height * 0.2);
+                node.x = ((width / this.outputs) * (node.number - this.inputs)) + (width / this.outputs) / 2;
+                // node.x = width - (width * 0.2);
+                // node.y = ((height / this.outputs) * (node.number - this.inputs)) + (height / this.outputs) / 2;
             }
 
             nodes.push(node);
@@ -1175,7 +1171,8 @@ class NEATGenome {
 
         force.nodes(nodes)
             .links(connections)
-            .linkDistance(1)
+            .linkDistance(0.1)
+            .linkStrength(0.2)
             .start();
 
         let link = svg.selectAll('.link')
@@ -1196,9 +1193,17 @@ class NEATGenome {
             .attr('fill', function (d) { return d.layer == 0 ? '#00f' : d.output ? '#f00' : '#000' });
 
         node.append('text')
-            .attr('dx', -4)
-            .attr('dy', 23)
-            .text(function (d) { return d.number + (d.layer > 0 ? `: (${d.activation})` : null) });
+            .attr('dx', 10)
+            .attr('dy', 4)
+            .text(function (d) { return (d.output ? `(${d.activation})` : d.layer ? d.number : null) })
+            .on('mouseover', function (d) {
+                d3.select(this)
+                    .text(`${d.number}: (${d.activation})`)
+            })
+            .on('mouseleave', function (d) {
+                d3.select(this)
+                    .text(d.output ? `(${d.activation})` : d.layer ? d.number : null)
+            });
 
         force.on('tick', function () {
             link

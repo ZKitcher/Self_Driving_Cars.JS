@@ -94,7 +94,7 @@ class RaceTrack {
         push()
         //rectMode(CORNER)
         fill(125, 125)
-        this.checkPoints.forEach(e => rect(e.position.x - 50, e.position.y - 50, 100, 100))
+        //this.checkPoints.forEach(e => rect(e.position.x - 50, e.position.y - 50, 100, 100))
 
         for (let i = 0; i < this.cols - 1; i++) {
             for (let j = 0; j < this.rows - 1; j++) {

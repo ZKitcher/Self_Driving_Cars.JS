@@ -54,12 +54,6 @@ class Car extends NEATMLObject {
             this.score *= 0.75
             return;
         }
-        // if (this.checkpointTimer === 0) {
-        //     this.failed = true;
-        //     this.done = true;
-        //     this.fitness /= 1.5
-        //     return;
-        // }
 
         if (this.score < 0 || this.currentAccel < 0.5 && this.timeAlive > 10) {
             this.failed = true;
@@ -67,14 +61,7 @@ class Car extends NEATMLObject {
             return;
         }
 
-
-        // this.score += this.checkpointTimer > 0 ? 1 : -1;
         this.score++;
-
-        // this.fitness += ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * ((1800 - this.timeAlive) / 5);
-        // this.fitness += this.timeAlive * ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length));
-        // this.score += this.timeAlive * (this.checkpointTimer < 0 ? -0.1 : 1);
-
 
         this.avgSpeed.push(this.currentAccel)
 
@@ -133,9 +120,8 @@ class Car extends NEATMLObject {
 
     calculateFitness() {
         this.fitness = this.score;
-        this.fitness *= avg(this.avgSpeed);
+        this.fitness += this.fitness * (avg(this.avgSpeed) / this.maxspeed);
         // this.fitness *= ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * 10;
-
         // this.fitness *= this.checkpointTimer / 150 < 1 ? 0.9 : 1;
     }
 
