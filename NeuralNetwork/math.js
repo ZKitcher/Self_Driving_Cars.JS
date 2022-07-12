@@ -8,6 +8,8 @@ const sqrt = x => Math.sqrt(x);
 const cosh = x => (exp(x) + exp(-x)) / 2;
 const floor = x => Math.floor(x);
 const cos = x => Math.cos(x);
+const sin = x => Math.sin(x);
+const max = (...arg) => Math.max(...arg);
 const PI = Math.PI;
 const isNumber = x => typeof x === 'number';
 const clog = (...arg) => console.log(...arg);
@@ -679,7 +681,7 @@ const activations = {
         return 1 - numer / denom;
     },
     leakyrelu(x) {
-        return Math.max(x, x * 0.01);
+        return max(x, x * 0.01);
     },
     leakyrelu_d(x) {
         if (x >= 0) {
@@ -689,7 +691,7 @@ const activations = {
         }
     },
     relu(x) {
-        return Math.max(x, 0);
+        return max(x, 0);
     },
     relu_d(x) {
         if (x >= 0) {
@@ -702,14 +704,14 @@ const activations = {
         if (x === 0) {
             return 1;
         } else {
-            return Math.sin(x) / x;
+            return sin(x) / x;
         }
     },
     sinc_d(x) {
         if (x === 0) {
             return 0;
         } else {
-            return Math.cos(x) / x - Math.sin(x) / (x * x);
+            return cos(x) / x - sin(x) / (x * x);
         }
     },
     softsign(x) {

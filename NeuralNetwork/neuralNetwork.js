@@ -781,8 +781,8 @@ class NEATConnection {
         this.enabled = true;
     }
 
-    mutateWeight() {
-        rand() < 0.05 ? this.weight = rand(-1, 1) : this.weight += rand(-0.1, 0.1);
+    mutateWeight(magnitude) {
+        rand() < 0.05 ? this.weight = rand(-1, 1) : this.weight += rand(-magnitude, magnitude);
     }
 
     clone() {
@@ -810,7 +810,7 @@ class NEATNode {
     }
 
     engage() {
-        if (this.layer !== 0) {
+        if (this.layer) {
             this.outputValue = activations[this.activation](this.inputSum + this.bias);
         }
 
@@ -821,8 +821,8 @@ class NEATNode {
         });
     }
 
-    mutateBias() {
-        rand() < 0.05 ? this.bias = rand(-1, 1) : this.bias += rand(-0.1, 0.1);
+    mutateBias(magnitude) {
+        rand() < 0.05 ? this.bias = rand(-1, 1) : this.bias += rand(-magnitude, magnitude);
     }
 
     mutateActivation() {
@@ -873,20 +873,18 @@ class NEATGenome {
             addConnectionRate: rand(0.05, 0.1),
             addNodeRate: rand(0.01, 0.3),
             mutationRate: rand(0.01, 100)
-        }
+        };
 
         if (!offSpring) {
             for (let i = 0; i < this.inputs; i++) {
                 this.nodes.push(new NEATNode(this.nextNode, 0));
                 this.nextNode++;
             }
-
             for (let i = 0; i < this.outputs; i++) {
                 let node = new NEATNode(this.nextNode, 1, true);
                 this.nodes.push(node);
                 this.nextNode++;
             }
-
             for (let i = 0; i < this.inputs; i++) {
                 for (let j = this.inputs; j < this.outputs + this.inputs; j++) {
                     let weight = rand(-1, 1);
@@ -966,39 +964,39 @@ class NEATGenome {
         return offSpring;
     }
 
-    mutate() {
+    mutate(mutationRate = 0.1) {
         let rates = this.mutRates;
         //MOD Connections
         this.connections.forEach(e => {
             if (rand() < rates.connectionRate) {
-                e.mutateWeight()
+                e.mutateWeight(mutationRate)
             }
         })
 
         //MOD Bias
         this.nodes.forEach(e => {
             if (rand() < rates.biasRate) {
-                e.mutateBias()
+                e.mutateBias(mutationRate)
             }
         })
 
+        //MOD Node
         if (rand() < rates.activationRate) {
-            //MOD Node
             this.nodes[floor(rand(this.nodes.length))].mutateActivation();
         }
 
+        //ADD Connections
         if (rand() < rates.addConnectionRate) {
-            //ADD Connections
             this.addConnection();
         }
 
+        //ADD Node
         if (rand() < rates.addNodeRate) {
-            //ADD Node
             this.addNode();
         }
 
+        //ADD Node
         if (rand() < rates.mutationRate) {
-            //ADD Node
             this.mutateRates();
         }
     }
@@ -1057,7 +1055,7 @@ class NEATGenome {
 
     commonConnection(innN, connections) {
         for (let i = 0; i < connections.length; i++) {
-            if (innN == connections[i].getInnovationNumber()) {
+            if (innN === connections[i].getInnovationNumber()) {
                 return i;
             }
         }
@@ -1079,7 +1077,7 @@ class NEATGenome {
         let nodesPerLayer = [];
 
         this.nodes.forEach((node) => {
-            if (nodesPerLayer[node.layer] != undefined) {
+            if (nodesPerLayer[node.layer] !== undefined) {
                 nodesPerLayer[node.layer]++;
             } else {
                 nodesPerLayer[node.layer] = 1;
@@ -1119,37 +1117,43 @@ class NEATGenome {
         return this.connections.length + this.nodes.length;
     }
 
-    draw(width = 400, height = 400, container = 'svgContainer') {
-        var element = document.getElementById(this.id);
+    draw(width = 500, height = 400, container = 'svgContainer') {
+        const svgElement = document.getElementById(container);
+        if (!svgElement) {
+            const newSVGContainer = document.createElement('div');
+            newSVGContainer.id = container;
+            newSVGContainer.style.position = 'absolute';
+            newSVGContainer.style.top = '5px';
+            newSVGContainer.style.right = '5px';
+            document.body.prepend(newSVGContainer);
+        }
+
+        let element = document.getElementById(this.id);
         if (element) element.parentNode.removeChild(element);
 
-        var svg = d3.select('body').append('svg')
+        let svg = d3.select('body').append('svg')
             .attr('width', width)
             .attr('height', height)
             .attr('id', this.id);
 
 
-        var force = d3.layout.force()
-            .gravity(.05)
+        let force = d3.layout.force()
+            .gravity(0)
             .distance(100)
-            .charge(-100)
+            .charge(0)
             .size([width, height]);
 
-        let connections = [];
-        this.connections.forEach(conn => {
-            connections.push(
-                {
-                    source: this.getNode(conn.fromNode.number),
-                    target: this.getNode(conn.toNode.number),
-                    weight: conn.weight,
-                    enabled: conn.enabled
-                }
-            );
+        const connections = this.connections.map(e => {
+            return {
+                source: this.getNode(e.fromNode.number),
+                target: this.getNode(e.toNode.number),
+                weight: e.weight,
+                enabled: e.enabled
+            }
         });
 
-        let nodes = [];
-        this.nodes.forEach(originalNode => {
-            let node = originalNode.clone();
+        const nodes = this.nodes.map(e => {
+            let node = e.clone();
             if (node.layer === 0) {
                 node.fixed = true;
                 node.y = height - (height * 0.2);
@@ -1165,22 +1169,21 @@ class NEATGenome {
                 // node.x = width - (width * 0.2);
                 // node.y = ((height / this.outputs) * (node.number - this.inputs)) + (height / this.outputs) / 2;
             }
-
-            nodes.push(node);
+            return node
         });
 
         force.nodes(nodes)
             .links(connections)
-            .linkDistance(0.1)
-            .linkStrength(0.2)
+            .gravity(0.001)
+            .linkStrength(1)
             .start();
 
         let link = svg.selectAll('.link')
             .data(connections)
             .enter().append('line')
             .attr('class', 'link')
-            .style('stroke-width', function (d) { return d.enabled ? (d.weight > 0 ? d.weight : d.weight * -1) + 0.5 : 0 })
-            .style('stroke', function (d) { return d.weight > 0 ? '#0f0' : '#f00'; });
+            .style('stroke-width', (d) => { return d.enabled ? (d.weight > 0 ? d.weight : d.weight * -1) + 0.5 : 0 })
+            .style('stroke', (d) => { return d.weight > 0 ? '#0f0' : '#f00'; });
 
         let node = svg.selectAll('.node')
             .data(nodes)
@@ -1190,12 +1193,12 @@ class NEATGenome {
 
         node.append('circle')
             .attr('r', '5')
-            .attr('fill', function (d) { return d.layer == 0 ? '#00f' : d.output ? '#f00' : '#000' });
+            .attr('fill', (d) => { return d.layer == 0 ? '#00f' : d.output ? '#f00' : '#000' });
 
         node.append('text')
             .attr('dx', 10)
             .attr('dy', 4)
-            .text(function (d) { return (d.output ? `(${d.activation})` : d.layer ? d.number : null) })
+            .text((d) => { return (d.output ? `(${d.activation})` : null) })
             .on('mouseover', function (d) {
                 d3.select(this)
                     .text(`${d.number}: (${d.activation})`)
@@ -1205,17 +1208,17 @@ class NEATGenome {
                     .text(d.output ? `(${d.activation})` : d.layer ? d.number : null)
             });
 
-        force.on('tick', function () {
+        force.on('tick', () => {
             link
-                .attr('x1', function (d) { return d.source.x; })
-                .attr('y1', function (d) { return d.source.y; })
-                .attr('x2', function (d) { return d.target.x; })
-                .attr('y2', function (d) { return d.target.y; });
+                .attr('x1', (d) => { return d.source.x; })
+                .attr('y1', (d) => { return d.source.y; })
+                .attr('x2', (d) => { return d.target.x; })
+                .attr('y2', (d) => { return d.target.y; });
 
-            node.attr('transform', function (d) { return 'translate(' + d.x + ',' + d.y + ')'; });
+            node.attr('transform', (d) => { return `translate(${d.x},${d.y})`; });
         });
 
-        var element = document.getElementById(this.id);
+        element = document.getElementById(this.id);
         document.getElementById(container).append(element);
     }
 }

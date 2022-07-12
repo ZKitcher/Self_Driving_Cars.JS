@@ -1,4 +1,4 @@
-class Car extends NEATMLObject {
+class Car extends NEATAgent {
     constructor(id) {
         super(id);
         this.acceleration = createVector(0, 0);
@@ -23,11 +23,10 @@ class Car extends NEATMLObject {
         this.avgSpeed = []
 
         this.checkpointTimer = 180;
-
     }
 
     run() {
-        this.checkPointCheck();
+        //this.checkPointCheck();
         this.update();
         this.render();
     }
@@ -61,7 +60,7 @@ class Car extends NEATMLObject {
             return;
         }
 
-        this.score++;
+        if (this.currentAccel > 2) this.score++;
 
         this.avgSpeed.push(this.currentAccel)
 
@@ -76,7 +75,6 @@ class Car extends NEATMLObject {
         if (!keyIsDown(UP_ARROW) && !keyIsDown(DOWN_ARROW)) {
             cars.currentAccel -= 0.05;
         }
-
         if (keyIsDown(LEFT_ARROW)) {
             if (cars.currentAccel > 0) {
                 cars.carSteering -= 0.05;
@@ -87,7 +85,6 @@ class Car extends NEATMLObject {
                 cars.carSteering += 0.05;
             }
         }
-
         if (!keyIsDown(LEFT_ARROW) && !keyIsDown(RIGHT_ARROW)) {
             cars.carSteering = 0;
         }
@@ -99,8 +96,11 @@ class Car extends NEATMLObject {
             this.currentAccel = 0;
             this.carSteering = 0;
         } else if (this.currentAccel > 0.5) {
-            if (this.carSteering > 0.02) this.carSteering = 0.02;
-            if (this.carSteering < -0.02) this.carSteering = -0.02;
+            if (this.carSteering > 0.04) this.carSteering = 0.04;
+            if (this.carSteering < -0.04) this.carSteering = -0.04;
+            this.currentAccel -= 0.05;
+            if (this.carSteering > 0) this.carSteering -= 0.001
+            if (this.carSteering < 0) this.carSteering += 0.001
         } else {
             this.carSteering = 0
         }
@@ -121,8 +121,6 @@ class Car extends NEATMLObject {
     calculateFitness() {
         this.fitness = this.score;
         this.fitness += this.fitness * (avg(this.avgSpeed) / this.maxspeed);
-        // this.fitness *= ((this.checkpoint.length + 1) + (this.laps * racetrack.checkPoints.length)) * 10;
-        // this.fitness *= this.checkpointTimer / 150 < 1 ? 0.9 : 1;
     }
 
     checkPointCheck() {
@@ -159,13 +157,12 @@ class Car extends NEATMLObject {
         let inputs = this.siteDistances.map(e => e > 300 ? 1 : (e / 300))
         inputs.pop()
         inputs.push(this.currentAccel / this.maxspeed)
-        inputs.push(this.carSteering / 0.2)
+        inputs.push(this.carSteering / 0.4)
 
-        this.prediction = this.brain.predict(inputs)
+        this.prediction = this.brain.predict(inputs).map(e => e > 1 ? 1 : e);
 
         this.currentAccel += this.prediction[0] * 0.1;
-        this.carSteering += this.prediction[1] * 0.05;
-
+        this.carSteering += this.prediction[1] * 0.04;
     }
 
     applyForce(force) {
@@ -216,9 +213,24 @@ class Car extends NEATMLObject {
         //angleMode(RADIANS);
 
         if (this.topAgent) {
+            push()
+
             fill(255);
-            text(this.currentAccel, 10, 30)
-            text(this.checkpointTimer, 10, 40)
+            text('Acceleration', 10, 30)
+            text(this.currentAccel.toFixed(2), 10, 40)
+            rect(10, 43, 50, 10)
+
+            text('Turning', 10, 70)
+            text(this.carSteering.toFixed(2), 10, 80)
+            rect(10, 83, 50, 10)
+
+            fill(this.prediction[0] > 0 ? 'rgb(0,255,0)' : 'rgb(255,0,0)')
+            rect(10, 43, abs(this.prediction[0]) * 50, 10)
+
+            fill(0, 0, 0)
+            rect(35, 83, this.prediction[1] * 25, 10)
+
+            pop()
         }
 
         push();
