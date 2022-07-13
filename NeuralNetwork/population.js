@@ -1,5 +1,5 @@
 if (!document.getElementById('d3js')) {
-    const D3JS = 'https://d3js.org/d3.v2.min.js?2.9.3';
+    const D3JS = 'https://d3js.org/d3.v2.min.js';
     const script = document.createElement('script');
     script.id = 'd3js';
     script.setAttribute('src', D3JS);
@@ -16,13 +16,15 @@ class NEATPopulation {
         this.constructor = constructor;
 
         this.mutationRate = 0.1;
-
+        this.averageFitness = 0;
         this.timerEnabled = true;
         this.timerCount = 30;
         this.timer = this.timerCount;
 
         this.topAgent = null;
         this.eliteAgents = 5;
+
+        this.showBrain = true;
 
         for (let i = 0; i < this.popSize; i++) {
             this.agents.push(new this.constructor(i))
@@ -42,9 +44,9 @@ class NEATPopulation {
     run() {
         this.runTimer();
 
-        this.agents.forEach(e => e.run());
-
         this.checkDone();
+
+        this.agents.forEach(e => e.run());
 
         this.render();
     }
@@ -52,9 +54,9 @@ class NEATPopulation {
     runTimer() {
         if (!this.timerEnabled) return;
 
-        if (frameCount % 60 == 0 && this.timer > 0) this.timer--;
+        if (frameCount % 60 === 0) this.timer--;
 
-        if (this.timer == 0) this.reset()
+        if (!this.timer) this.reset()
 
         push()
         fill(this.styling.fontColour ?? '#000000');
@@ -78,14 +80,15 @@ class NEATPopulation {
             if (e.fitness > max) {
                 max = e.fitness;
                 this.topAgent = e;
-                this.topAgent.brain.id = "BestGenome";
+                this.topAgent.brain.id = 'topAgent';
             }
             if (e.fitness < min) min = e.fitness;
         })
 
-        this.agents.forEach(e => e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))));
+        this.normaliseFitness(min, max)
+        this.getAverageFitness();
         this.fillMatingPool();
-        this.drawAgentBrain(this.topAgent.brain);
+        this.renderAgentBrain(this.topAgent.brain);
         this.selection();
     }
 
@@ -103,11 +106,9 @@ class NEATPopulation {
                             )
                 );
 
-            newChild.brain.generateNetwork()
-
             if (i === 0) {
                 newChild.topAgent = true;
-            } else if (i < this.eliteAgents) {
+            } else if (i < this.eliteAgents + 1) {
                 newChild.eliteAgent = true;
             }
 
@@ -135,13 +136,12 @@ class NEATPopulation {
     }
 
     fillMatingPool() {
-        let average = this.getAverageFitness();
         this.matingPool = [];
         this.agents
             .sort((a, b) => b.fitness - a.fitness)
             .forEach((e, index) => {
                 if (!e.topAgent && !e.eliteAgent) {
-                    if (e.fitness >= average) {
+                    if (e.fitness >= this.averageFitness) {
                         let n = e.fitness * 100;
                         for (let i = 0; i < n; i++) {
                             this.matingPool.push(index);
@@ -151,6 +151,10 @@ class NEATPopulation {
             });
     }
 
+    normaliseFitness(min, max) {
+        this.agents.forEach(e => e.fitness = (min === max ? (e.fitness / max) : ((e.fitness - min) / (max - min))));
+    }
+
     selectAgent() {
         return this.agents[rand(this.matingPool)]
     }
@@ -158,7 +162,7 @@ class NEATPopulation {
     getAverageFitness() {
         let avSum = 0;
         this.agents.forEach((e) => avSum += e.fitness);
-        return avSum / this.agents.length;
+        this.averageFitness = avSum / this.agents.length;
     }
 
     collectData(input, target) {
@@ -174,7 +178,7 @@ class NEATPopulation {
         if (typeof time === 'boolean') {
             this.timerEnabled = time;
             if (this.timerEnabled) this.setTimer(this.timerCount);
-        } else if (isNumber(time)) {
+        } else if (isNumber(time) && time > 0) {
             this.timerCount = time;
             this.timer = time;
             this.timerEnabled = true;
@@ -191,7 +195,7 @@ class NEATPopulation {
     render() {
         push();
         fill(this.styling.fontColour ?? '#000000');
-        text(this.generation, 10, 15);
+        text(`Generation: ${this.generation}`, 10, 15);
         pop();
     }
 
@@ -200,7 +204,9 @@ class NEATPopulation {
         this.timer = this.timerCount
     }
 
-    drawAgentBrain(agent, width = 500, height = 400, container = 'svgContainer') {
+    renderAgentBrain(agent, width = 500, height = 400, container = 'svgBrainContainer') {
+        if (!this.showBrain) return;
+
         const svgElement = document.getElementById(container);
         if (!svgElement) {
             const newSVGContainer = document.createElement('div');
@@ -223,7 +229,12 @@ class NEATPopulation {
         let force = d3.layout.force()
             .size([width, height]);
 
+        let min = Infinity;
+        let max = -Infinity;
+
         const connections = agent.connections.map(e => {
+            if (e.weight > max) max = e.weight;
+            if (e.weight < min) min = e.weight;
             return {
                 source: agent.getNode(e.fromNode.number),
                 target: agent.getNode(e.toNode.number),
@@ -238,19 +249,15 @@ class NEATPopulation {
                 node.fixed = true;
                 node.y = height - (height * 0.2);
                 node.x = ((width / agent.inputs) * node.number) + (width / agent.inputs) / 2;
-                // node.y = ((height / agent.inputs) * node.number) + (height / agent.inputs) / 2;
-                // node.x = (width * 0.2);
-            }
-
-            if (node.output) {
+            } else if (node.output) {
                 node.fixed = true;
-                node.y = (height * 0.2);
+                node.y = height * 0.2;
                 node.x = ((width / agent.outputs) * (node.number - agent.inputs)) + (width / agent.outputs) / 2;
-                // node.x = width - (width * 0.2);
-                // node.y = ((height / agent.outputs) * (node.number - agent.inputs)) + (height / agent.outputs) / 2;
             }
             return node
         });
+
+        const getColor = (value, min, max) => `hsl(${((1 - (value - min) / (max - min)) * 120).toString(10)},100%,50%)`;
 
         force.nodes(nodes)
             .links(connections)
@@ -263,8 +270,8 @@ class NEATPopulation {
             .enter().append('line')
             .attr('class', 'link')
             .style('stroke-width', (d) => { return d.enabled ? abs(d.weight) + 1 : 0 })
-            .style('stroke', (d) => { return d.weight > 0 ? '#0f0' : '#f00'; })
-            .style('opacity', (d) => { return d.source.layer === 0 && d.target.output ? '0.2' : '1' });
+            .style('stroke', (d) => { return getColor(d.weight, min, max); })
+            .style('opacity', (d) => { return d.source.layer === 0 && d.target.output ? '0.5' : '1' });
 
         let node = svg.selectAll('.node')
             .data(nodes)

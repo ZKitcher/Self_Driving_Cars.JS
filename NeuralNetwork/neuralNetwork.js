@@ -830,7 +830,7 @@ class NEATNode {
     }
 
     isConnectedTo(node) {
-        if (node.layer == this.layer) {
+        if (node.layer === this.layer) {
             return false;
         }
 
@@ -856,7 +856,7 @@ class NEATNode {
 }
 
 class NEATGenome {
-    constructor(i = 1, o = 1, id, offSpring = false) {
+    constructor(i = 1, o = 1, id = rand(), offSpring = false) {
         this.inputs = i;
         this.outputs = o;
         this.id = id;
@@ -866,14 +866,8 @@ class NEATGenome {
         this.nodes = [];
         this.connections = [];
 
-        this.mutRates = {
-            connectionRate: rand(0.4, 0.5),
-            biasRate: rand(0.4, 0.5),
-            activationRate: rand(0.05, 0.1),
-            addConnectionRate: rand(0.05, 0.1),
-            addNodeRate: rand(0.01, 0.3),
-            mutationRate: rand(0.01, 100)
-        };
+        this.mutationRates = {};
+        this.rollMutations()
 
         if (!offSpring) {
             for (let i = 0; i < this.inputs; i++) {
@@ -907,23 +901,22 @@ class NEATGenome {
     feedForward(inputValues) {
         this.generateNetwork();
 
-        this.nodes.forEach((node) => { node.inputSum = 0; });
+        this.nodes.forEach(e => e.inputSum = 0);
 
         for (let i = 0; i < this.inputs; i++) {
             this.nodes[i].outputValue = inputValues[i];
         }
 
         let result = [];
-        this.nodes.forEach((node) => {
-            node.engage();
-            if (node.output) result.push(node.outputValue);
+        this.nodes.forEach(e => {
+            e.engage();
+            if (e.output) result.push(e.outputValue);
         });
         return result;
     }
 
     crossover(partner) {
-        //TODO: find a good way to generate unique ids
-        let offSpring = new NEATGenome(this.inputs, this.outputs, 0, true);
+        let offSpring = new NEATGenome(this.inputs, this.outputs, rand(), true);
 
         for (let i = 0; i < this.nodes.length; i++) {
             let node = this.nodes[i].clone();
@@ -950,13 +943,13 @@ class NEATGenome {
             if (conn.fromNode && conn.toNode) offSpring.connections.push(conn);
         })
 
-        let p1 = this.mutRates;
-        let p2 = partner.mutRates;
-        offSpring.mutRates.connectionRate = rand() > 0.5 ? p1.connectionRate : p2.connectionRate;
-        offSpring.mutRates.biasRate = rand() > 0.5 ? p1.biasRate : p2.biasRate;
-        offSpring.mutRates.activationRate = rand() > 0.5 ? p1.activationRate : p2.activationRate;
-        offSpring.mutRates.addConnectionRate = rand() > 0.5 ? p1.addConnectionRate : p2.addConnectionRate;
-        offSpring.mutRates.addNodeRate = rand() > 0.5 ? p1.addNodeRate : p2.addNodeRate;
+        let p1 = this.mutationRates;
+        let p2 = partner.mutationRates;
+        offSpring.mutationRates.connectionRate = rand() > 0.5 ? p1.connectionRate : p2.connectionRate;
+        offSpring.mutationRates.biasRate = rand() > 0.5 ? p1.biasRate : p2.biasRate;
+        offSpring.mutationRates.activationRate = rand() > 0.5 ? p1.activationRate : p2.activationRate;
+        offSpring.mutationRates.addConnectionRate = rand() > 0.5 ? p1.addConnectionRate : p2.addConnectionRate;
+        offSpring.mutationRates.addNodeRate = rand() > 0.5 ? p1.addNodeRate : p2.addNodeRate;
 
         offSpring.layers = this.layers;
         offSpring.nextNode = offSpring.nodes.length;
@@ -965,49 +958,28 @@ class NEATGenome {
     }
 
     mutate(mutationRate = 0.1) {
-        let rates = this.mutRates;
-        //MOD Connections
-        this.connections.forEach(e => {
-            if (rand() < rates.connectionRate) {
-                e.mutateWeight(mutationRate)
-            }
-        })
-
-        //MOD Bias
-        this.nodes.forEach(e => {
-            if (rand() < rates.biasRate) {
-                e.mutateBias(mutationRate)
-            }
-        })
-
-        //MOD Node
-        if (rand() < rates.activationRate) {
-            this.nodes[floor(rand(this.nodes.length))].mutateActivation();
-        }
-
-        //ADD Connections
-        if (rand() < rates.addConnectionRate) {
-            this.addConnection();
-        }
-
-        //ADD Node
-        if (rand() < rates.addNodeRate) {
-            this.addNode();
-        }
-
-        //ADD Node
-        if (rand() < rates.mutationRate) {
-            this.mutateRates();
-        }
+        const rates = this.mutationRates;
+        // MOD Connections
+        this.connections.forEach(e => { if (rand() < rates.connectionRate) e.mutateWeight(mutationRate) })
+        // MOD Bias
+        this.nodes.forEach(e => { if (rand() < rates.biasRate) e.mutateBias(mutationRate) })
+        // MOD Node
+        if (rand() < rates.activationRate) this.nodes[floor(rand(this.nodes.length))].mutateActivation();
+        // ADD Connections
+        if (rand() < rates.addConnectionRate) this.addConnection();
+        // ADD Node
+        if (rand() < rates.addNodeRate) this.addNode();
+        // ADD Node
+        if (rand() < rates.rollMutation) this.rollMutations();
     }
 
-    mutateRates() {
-        this.mutRates.connectionRate = rand(0.8, 0.9)
-        this.mutRates.biasRate = rand(0.5, 0.6)
-        this.mutRates.activationRate = rand(0.05, 0.1)
-        this.mutRates.addConnectionRate = rand(0.05, 0.1)
-        this.mutRates.addNodeRate = rand(0.01, 0.3)
-        this.mutRates.mutationRate = rand(0.01, 1)
+    rollMutations() {
+        this.mutationRates.connectionRate = rand(0.8, 0.9)
+        this.mutationRates.biasRate = rand(0.5, 0.6)
+        this.mutationRates.activationRate = rand(0.05, 0.1)
+        this.mutationRates.addConnectionRate = rand(0.05, 0.1)
+        this.mutationRates.addNodeRate = rand(0.01, 0.03)
+        this.mutationRates.rollMutation = rand(0.01, 1)
     }
 
     addNode() {
@@ -1054,12 +1026,7 @@ class NEATGenome {
     }
 
     commonConnection(innN, connections) {
-        for (let i = 0; i < connections.length; i++) {
-            if (innN === connections[i].getInnovationNumber()) {
-                return i;
-            }
-        }
-        return -1;
+        return connections.findIndex(e => innN === e.getInnovationNumber());
     }
 
     nodesConnected(node1, node2) {
@@ -1099,25 +1066,21 @@ class NEATGenome {
 
     clone() {
         let clone = new NEATGenome(this.inputs, this.outputs, this.id);
+        clone.mutationRates = this.mutationRates;
         clone.nodes = [...this.nodes];
         clone.connections = [...this.connections];
         return clone;
     }
 
     getNode(x) {
-        for (let i = 0; i < this.nodes.length; i++) {
-            if (this.nodes[i].number === x) {
-                return i;
-            }
-        }
-        return -1;
+        return this.nodes.findIndex(e => e.number === x)
     }
 
     calculateWeight() {
         return this.connections.length + this.nodes.length;
     }
 
-    draw(width = 500, height = 400, container = 'svgContainer') {
+    render(width = 500, height = 400, container = 'svgBrainContainer') {
         const svgElement = document.getElementById(container);
         if (!svgElement) {
             const newSVGContainer = document.createElement('div');
@@ -1128,46 +1091,43 @@ class NEATGenome {
             document.body.prepend(newSVGContainer);
         }
 
-        let element = document.getElementById(this.id);
+        let element = document.getElementById(agent.id);
         if (element) element.parentNode.removeChild(element);
 
         let svg = d3.select('body').append('svg')
             .attr('width', width)
             .attr('height', height)
-            .attr('id', this.id);
+            .attr('id', agent.id);
 
 
         let force = d3.layout.force()
-            .gravity(0)
-            .distance(100)
-            .charge(0)
             .size([width, height]);
 
-        const connections = this.connections.map(e => {
+        const connections = agent.connections.map(e => {
             return {
-                source: this.getNode(e.fromNode.number),
-                target: this.getNode(e.toNode.number),
+                source: agent.getNode(e.fromNode.number),
+                target: agent.getNode(e.toNode.number),
                 weight: e.weight,
                 enabled: e.enabled
             }
         });
 
-        const nodes = this.nodes.map(e => {
+        const nodes = agent.nodes.map(e => {
             let node = e.clone();
             if (node.layer === 0) {
                 node.fixed = true;
                 node.y = height - (height * 0.2);
-                node.x = ((width / this.inputs) * node.number) + (width / this.inputs) / 2;
-                // node.y = ((height / this.inputs) * node.number) + (height / this.inputs) / 2;
+                node.x = ((width / agent.inputs) * node.number) + (width / agent.inputs) / 2;
+                // node.y = ((height / agent.inputs) * node.number) + (height / agent.inputs) / 2;
                 // node.x = (width * 0.2);
             }
 
             if (node.output) {
                 node.fixed = true;
                 node.y = (height * 0.2);
-                node.x = ((width / this.outputs) * (node.number - this.inputs)) + (width / this.outputs) / 2;
+                node.x = ((width / agent.outputs) * (node.number - agent.inputs)) + (width / agent.outputs) / 2;
                 // node.x = width - (width * 0.2);
-                // node.y = ((height / this.outputs) * (node.number - this.inputs)) + (height / this.outputs) / 2;
+                // node.y = ((height / agent.outputs) * (node.number - agent.inputs)) + (height / agent.outputs) / 2;
             }
             return node
         });
@@ -1182,8 +1142,9 @@ class NEATGenome {
             .data(connections)
             .enter().append('line')
             .attr('class', 'link')
-            .style('stroke-width', (d) => { return d.enabled ? (d.weight > 0 ? d.weight : d.weight * -1) + 0.5 : 0 })
-            .style('stroke', (d) => { return d.weight > 0 ? '#0f0' : '#f00'; });
+            .style('stroke-width', (d) => { return d.enabled ? abs(d.weight) + 1 : 0 })
+            .style('stroke', (d) => { return d.weight > 0 ? '#0f0' : '#f00'; })
+            .style('opacity', (d) => { return d.source.layer === 0 && d.target.output ? '0.2' : '1' });
 
         let node = svg.selectAll('.node')
             .data(nodes)
@@ -1218,7 +1179,7 @@ class NEATGenome {
             node.attr('transform', (d) => { return `translate(${d.x},${d.y})`; });
         });
 
-        element = document.getElementById(this.id);
+        element = document.getElementById(agent.id);
         document.getElementById(container).append(element);
     }
 }

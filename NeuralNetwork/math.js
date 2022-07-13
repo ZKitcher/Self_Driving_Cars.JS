@@ -500,7 +500,7 @@ class Matrix {
     };
 }
 
-const normalizeData = (data, min, max) => {
+const normaliseData = (data, min, max) => {
     if (min === undefined || max === undefined) {
         min = minValue(data);
         max = maxValue(data);
