@@ -978,20 +978,26 @@ class NEATGenome {
         this.mutationRates.biasRate = rand(0.5, 0.6)
         this.mutationRates.activationRate = rand(0.05, 0.1)
         this.mutationRates.addConnectionRate = rand(0.05, 0.1)
-        this.mutationRates.addNodeRate = rand(0.01, 0.03)
+        this.mutationRates.addNodeRate = rand(0.01, 0.05)
         this.mutationRates.rollMutation = rand(0.01, 1)
     }
 
     addNode() {
         let connectionIndex = floor(rand(this.connections.length));
         let pickedConnection = this.connections[connectionIndex];
+
+        if (pickedConnection.fromNode.layer !== 0 && !pickedConnection.toNode.output) {
+            connectionIndex = floor(rand(this.connections.length));
+            pickedConnection = this.connections[connectionIndex];
+        }
+
         pickedConnection.enabled = false;
         this.connections.splice(connectionIndex, 1);
 
         let newNode = new NEATNode(this.nextNode, pickedConnection.fromNode.layer + 1);
 
-        this.nodes.forEach((node) => {
-            if (node.layer > pickedConnection.fromNode.layer) node.layer++;
+        this.nodes.forEach(e => {
+            if (e.layer > pickedConnection.fromNode.layer) e.layer++;
         });
 
         let newConnection1 = new NEATConnection(pickedConnection.fromNode, newNode, 1);
@@ -1078,6 +1084,57 @@ class NEATGenome {
 
     calculateWeight() {
         return this.connections.length + this.nodes.length;
+    }
+
+    downloadNetwork(title = 'NEAT Genome') {
+        JSON.safeStringify = (obj, indent = 2) => {
+            let cache = [];
+            const retVal = JSON.stringify(obj, (key, value) => typeof value === "object" && value !== null ? cache.includes(value) ? undefined : cache.push(value) && value : value, indent);
+            cache = null;
+            return retVal;
+        };
+        clog(JSON.safeStringify(this))
+        // download(title, JSON.safeStringify(this))
+    }
+
+    fromJSON(data) {
+        this.inputs = data.inputs;
+        this.outputs = data.outputs;
+        this.id = data.id;
+        this.layers = data.layers;
+        this.nextNode = data.nextNode;
+
+        // TODO Node from JSON
+        this.nodes = data.nodes.map(e => e);
+        this.connections = data.connections.map(e => e);
+        this.mutationRates = data.mutationRates;
+
+        // if (!offSpring) {
+        //     for (let i = 0; i < this.inputs; i++) {
+        //         this.nodes.push(new NEATNode(this.nextNode, 0));
+        //         this.nextNode++;
+        //     }
+        //     for (let i = 0; i < this.outputs; i++) {
+        //         let node = new NEATNode(this.nextNode, 1, true);
+        //         this.nodes.push(node);
+        //         this.nextNode++;
+        //     }
+        //     for (let i = 0; i < this.inputs; i++) {
+        //         for (let j = this.inputs; j < this.outputs + this.inputs; j++) {
+        //             let weight = rand(-1, 1);
+        //             this.connections.push(new NEATConnection(this.nodes[i], this.nodes[j], weight));
+        //         }
+        //     }
+        // }
+    }
+
+    static createFromJSON(JSON, options) {
+        const model = new NEATGenome();
+        model.fromJSON(JSON);
+        if (options) {
+            clog('Network created from JSON', JSON)
+        }
+        return model;
     }
 
     render(width = 500, height = 400, container = 'svgBrainContainer') {

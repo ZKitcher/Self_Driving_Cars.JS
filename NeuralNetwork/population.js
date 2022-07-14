@@ -26,11 +26,7 @@ class NEATPopulation {
 
         this.showBrain = true;
 
-        for (let i = 0; i < this.popSize; i++) {
-            this.agents.push(new this.constructor(i))
-            this.agents[i].brain.generateNetwork();
-            this.agents[i].brain.mutate();
-        }
+        this.generateAgentsPool()
 
         if (typeof completedGeneration === 'undefined') {
             NetworkError.warn('completedGeneration(topAgent) not set to fire after each generation.', 'MLObject.constructor')
@@ -39,14 +35,30 @@ class NEATPopulation {
         this.styling = {
             fontColour: null,
         }
+
+        this.pause = false;
+    }
+
+    generateAgentsPool() {
+        for (let i = 0; i < this.popSize; i++) {
+            this.agents.push(this.buildAgent(i))
+            this.agents[i].brain.generateNetwork();
+            this.agents[i].brain.mutate();
+        }
+    }
+
+    buildAgent(...arg) {
+        return new this.constructor(...arg)
     }
 
     run() {
-        this.runTimer();
-
-        this.checkDone();
-
-        this.agents.forEach(e => e.run());
+        if (!this.pause) {
+            this.runTimer();
+            this.checkDone();
+            this.agents.forEach(e => e.run());
+        } else {
+            this.agents.forEach(e => e.render());
+        }
 
         this.render();
     }
@@ -66,13 +78,14 @@ class NEATPopulation {
     }
 
     checkDone() {
-        if (this.agents.filter(e => !e.done).length === 0) this.reset()
+        if (this.agents.filter(e => !e.done).length === 0) {
+            this.reset()
+        }
     }
 
     evaluate() {
         let max = -Infinity;
         let min = Infinity;
-        this.matingPool = [];
 
         this.agents.forEach(e => {
             e.calculateFitness()
@@ -88,23 +101,22 @@ class NEATPopulation {
         this.normaliseFitness(min, max)
         this.getAverageFitness();
         this.fillMatingPool();
-        this.renderAgentBrain(this.topAgent.brain);
+        this.renderAgentBrain(this.topAgent);
         this.selection();
     }
 
     selection() {
         this.agents = this.agents.map((e, i) => {
-            let newChild = new this
-                .constructor(
-                    i < this.eliteAgents + 1 ?
-                        e.brain.clone() :
-                        NEATAgent
-                            .crossover(
-                                this.selectAgent(),
-                                this.selectAgent(),
-                                this.mutationRate
-                            )
-                );
+            let newChild = this.buildAgent(
+                i < this.eliteAgents + 1 ?
+                    e.brain.clone() :
+                    NEATAgent
+                        .crossover(
+                            this.selectAgent(),
+                            this.selectAgent(),
+                            this.mutationRate
+                        )
+            )
 
             if (i === 0) {
                 newChild.topAgent = true;
@@ -122,19 +134,6 @@ class NEATPopulation {
         }
     }
 
-    rerun() {
-        this.agents = this.agents.map(e => {
-            let newChild = new this.constructor(e.brain.clone());
-            if (e.topAgent) {
-                newChild.topAgent = true;
-            } else if (e.eliteAgents) {
-                newChild.eliteAgent = true;
-            }
-            return newChild
-        })
-        this.timer = this.timerCount;
-    }
-
     fillMatingPool() {
         this.matingPool = [];
         this.agents
@@ -149,6 +148,11 @@ class NEATPopulation {
                     }
                 }
             });
+        if (this.matingPool.length === 0) {
+            for (let i = 0; i < this.popSize; i++) {
+                this.matingPool.push(i);
+            }
+        }
     }
 
     normaliseFitness(min, max) {
@@ -204,8 +208,53 @@ class NEATPopulation {
         this.timer = this.timerCount
     }
 
+    rerun() {
+        this.agents = this.agents.map(e => {
+            let newChild = this.buildAgent(e.brain.clone());
+            if (e.topAgent) {
+                newChild.topAgent = true;
+            } else if (e.eliteAgents) {
+                newChild.eliteAgent = true;
+            }
+            return newChild
+        })
+        this.timer = this.timerCount;
+    }
+
+    restart() {
+        this.agents = [];
+        this.datacollection = [];
+        this.generateAgentsPool();
+        this.generation = 1;
+        this.rerun();
+        const element = document.getElementById(this.topAgent?.brain.id);
+        if (element) element.parentNode.removeChild(element);
+    }
+
+    togglePause() {
+        this.pause = !this.pause
+    }
+
+    toggleBrainRender() {
+        this.showBrain = !this.showBrain;
+        if (!this.showBrain) {
+            const element = document.getElementById(this.topAgent.brain.id);
+            if (element) element.parentNode.removeChild(element);
+        } else {
+            this.renderAgentBrain(this.topAgent)
+        }
+    }
+
     renderAgentBrain(agent, width = 500, height = 400, container = 'svgBrainContainer') {
         if (!this.showBrain) return;
+
+        if (!(agent instanceof NEATGenome)) {
+            agent = agent?.brain;
+            if (!(agent instanceof NEATGenome)) {
+                NetworkError('NEATGenome not passed into fender function.')
+                return;
+            }
+        }
 
         const svgElement = document.getElementById(container);
         if (!svgElement) {
@@ -288,14 +337,6 @@ class NEATPopulation {
             .attr('dy', 4)
             .style('fill', this.styling.fontColour ?? '#000000')
             .text((d) => { return (d.output ? `(${d.activation})` : null) })
-            .on('mouseover', function (d) {
-                d3.select(this)
-                    .text(`${d.number}: (${d.activation})`)
-            })
-            .on('mouseleave', function (d) {
-                d3.select(this)
-                    .text(d.output ? `(${d.activation})` : d.layer ? d.number : null)
-            });
 
         force.on('tick', () => {
             link

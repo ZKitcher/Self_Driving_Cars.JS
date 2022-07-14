@@ -1,10 +1,11 @@
 class Car extends NEATAgent {
-    constructor(id) {
-        super(id);
+    constructor(brain, x = 150, y = 200) {
+        super(brain);
         this.acceleration = createVector(0, 0);
         this.velocity = createVector(0, 0);
-        this.position = createVector(150, 200);
+        this.position = createVector(startingPos.x, startingPos.y);
         this.maxspeed = 10;
+        this.turningRadius = 0.04
 
         this.currentAccel = 0;
         this.carSteering = 0;
@@ -64,30 +65,30 @@ class Car extends NEATAgent {
 
         this.avgSpeed.push(this.currentAccel)
 
-        if (keyIsDown(UP_ARROW)) {
-            cars.currentAccel += 0.1;
-        }
-        if (keyIsDown(DOWN_ARROW)) {
-            if (cars.currentAccel > 0) {
-                cars.currentAccel -= 0.1;
-            }
-        }
-        if (!keyIsDown(UP_ARROW) && !keyIsDown(DOWN_ARROW)) {
-            cars.currentAccel -= 0.05;
-        }
-        if (keyIsDown(LEFT_ARROW)) {
-            if (cars.currentAccel > 0) {
-                cars.carSteering -= 0.05;
-            }
-        }
-        if (keyIsDown(RIGHT_ARROW)) {
-            if (cars.currentAccel > 0) {
-                cars.carSteering += 0.05;
-            }
-        }
-        if (!keyIsDown(LEFT_ARROW) && !keyIsDown(RIGHT_ARROW)) {
-            cars.carSteering = 0;
-        }
+        // if (keyIsDown(UP_ARROW)) {
+        //     this.currentAccel += 0.1;
+        // }
+        // if (keyIsDown(DOWN_ARROW)) {
+        //     if (this.currentAccel > 0) {
+        //         this.currentAccel -= 0.1;
+        //     }
+        // }
+        // if (!keyIsDown(UP_ARROW) && !keyIsDown(DOWN_ARROW)) {
+        //     this.currentAccel -= 0.05;
+        // }
+        // if (keyIsDown(LEFT_ARROW)) {
+        //     if (this.currentAccel > 0) {
+        //         this.carSteering -= 0.05;
+        //     }
+        // }
+        // if (keyIsDown(RIGHT_ARROW)) {
+        //     if (this.currentAccel > 0) {
+        //         this.carSteering += 0.05;
+        //     }
+        // }
+        // if (!keyIsDown(LEFT_ARROW) && !keyIsDown(RIGHT_ARROW)) {
+        //     this.carSteering = 0;
+        // }
 
         if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
         this.networkPrediction()
@@ -96,9 +97,9 @@ class Car extends NEATAgent {
             this.currentAccel = 0;
             this.carSteering = 0;
         } else if (this.currentAccel > 0.5) {
-            if (this.carSteering > 0.04) this.carSteering = 0.04;
-            if (this.carSteering < -0.04) this.carSteering = -0.04;
-            this.currentAccel -= 0.05;
+            if (this.carSteering > this.turningRadius) this.carSteering = this.turningRadius;
+            if (this.carSteering < -this.turningRadius) this.carSteering = -this.turningRadius;
+            this.currentAccel -= 0.001;
             if (this.carSteering > 0) this.carSteering -= 0.001
             if (this.carSteering < 0) this.carSteering += 0.001
         } else {
@@ -161,7 +162,7 @@ class Car extends NEATAgent {
 
         this.prediction = this.brain.predict(inputs).map(e => e > 1 ? 1 : e);
 
-        this.currentAccel += this.prediction[0] * 0.1;
+        this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.5;
         this.carSteering += this.prediction[1] * 0.04;
     }
 
@@ -212,7 +213,7 @@ class Car extends NEATAgent {
     render() {
         //angleMode(RADIANS);
 
-        if (this.topAgent) {
+        if (this.topAgent && this.prediction) {
             push()
 
             fill(255);
