@@ -7,6 +7,8 @@ class Car extends NEATAgent {
         this.maxspeed = 10;
         this.turningRadius = 0.04
 
+        this.startingPos = createVector(startingPos.x, startingPos.y)
+
         this.currentAccel = 0;
         this.carSteering = 0;
 
@@ -20,20 +22,25 @@ class Car extends NEATAgent {
         this.timeAlive = 0;
 
         this.laps = 0;
-        this.checkpoint = []
+        this.lapTime = 0;
+        this.bestLap = Infinity;
+        this.leftStart = false;
+
         this.avgSpeed = []
 
         this.checkpointTimer = 180;
     }
 
     run() {
-        //this.checkPointCheck();
         this.update();
         this.render();
     }
 
     update() {
         if (this.done) return;
+
+        this.lapCheck();
+
         this.timeAlive++;
         this.checkpointTimer--;
 
@@ -62,6 +69,7 @@ class Car extends NEATAgent {
         }
 
         if (this.currentAccel > 2) this.score++;
+        this.lapTime++;
 
         this.avgSpeed.push(this.currentAccel)
 
@@ -121,36 +129,37 @@ class Car extends NEATAgent {
 
     calculateFitness() {
         this.fitness = this.score;
+
         this.fitness += this.fitness * (avg(this.avgSpeed) / this.maxspeed);
+
+        // let min = Infinity;
+        // cars.agents.forEach(e => {
+        //     if (e.laps > 0) {
+        //         if (e.bestLap < min) min = e.fitness;
+        //     }
+        // });
+
+        // if (min !== Infinity && min === this.bestLap) {
+        //     clog('Adding Lap bonus')
+        //     this.fitness += this.fitness * this.laps * 3
+        // }
     }
 
-    checkPointCheck() {
-        let checkpointIndex = this.checkpoint.length;
-        let next = racetrack.checkPoints[checkpointIndex]
-        let prev = racetrack.checkPoints[checkpointIndex - 2]
+    lapCheck() {
+        let distanceFromStart = dist(this.startingPos.x, this.startingPos.y, this.position.x, this.position.y);
 
-        if (!next) return;
-
-        if (this.position.x > next.position.x - 50 && this.position.y > next.position.y - 50
-            && this.position.x < next.position.x + 50 && this.position.y < next.position.y + 50
-        ) {
-            this.checkpoint.push(checkpointIndex + 1)
-            this.checkpointTimer = 150;
+        if (distanceFromStart > 500) {
+            this.leftStart = true;
         }
 
-        if (prev && this.position.x > prev.position.x - 50 && this.position.y > prev.position.y - 50
-            && this.position.x < prev.position.x + 50 && this.position.y < prev.position.y + 50
-        ) {
-            this.failed = true;
-            this.done = true;
-            this.score = 0;
-        }
-
-        if (racetrack.checkPoints.length === this.checkpoint.length) {
-            this.checkpoint = [];
+        if (this.leftStart && distanceFromStart < 50) {
+            this.leftStart = false;
+            if (this.lapTime < this.bestLap) {
+                this.bestLap = this.lapTime
+            };
+            this.lapTime = 0;
             this.laps++;
-            console.log('LAP COMPLETED!', this.laps)
-            this.checkpointTimer = 150;
+            clog('LAP COMPLETED!', this.laps)
         }
     }
 
@@ -225,11 +234,16 @@ class Car extends NEATAgent {
             text(this.carSteering.toFixed(2), 10, 80)
             rect(10, 83, 50, 10)
 
+            this.calculateFitness()
+            text(`Fitness: ${this.fitness.toFixed(0)}`, 10, 110)
+
             fill(this.prediction[0] > 0 ? 'rgb(0,255,0)' : 'rgb(255,0,0)')
             rect(10, 43, abs(this.prediction[0]) * 50, 10)
 
             fill(0, 0, 0)
             rect(35, 83, this.prediction[1] * 25, 10)
+
+
 
             pop()
         }

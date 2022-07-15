@@ -118,10 +118,12 @@ class NEATPopulation {
                         )
             )
 
-            if (i === 0) {
-                newChild.topAgent = true;
-            } else if (i < this.eliteAgents + 1) {
-                newChild.eliteAgent = true;
+            if (i < this.eliteAgents + 1) {
+                if (i === 0) {
+                    newChild.topAgent = true;
+                } else {
+                    newChild.eliteAgent = true;
+                }
             }
 
             return newChild;

@@ -1093,7 +1093,18 @@ class NEATGenome {
             cache = null;
             return retVal;
         };
-        clog(JSON.safeStringify(this))
+        //clog(JSON.safeStringify(this))
+
+        let clone = new NEATGenome(this.inputs, this.outputs, this.id);
+        clone.mutationRates = this.mutationRates;
+        clone.nodes = [...this.nodes];
+        clone.connections = [...this.connections];
+
+        console.log([...this.connections])
+        console.log([...this.nodes])
+        console.log(JSON.stringify([...this.connections]))
+        console.log(clone)
+
         // download(title, JSON.safeStringify(this))
     }
 
