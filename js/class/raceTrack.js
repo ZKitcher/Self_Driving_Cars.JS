@@ -58,6 +58,15 @@ class RaceTrack {
         }
     }
 
+    clearTrack() {
+        for (let i = 0; i < this.cols; i++) {
+            this.field[i] = [];
+            for (let j = 0; j < this.rows; j++) {
+                this.field[i][j] = 0
+            }
+        }
+    }
+
     downloadTrack(title = 'RaceTrack') {
         download(title, JSON.stringify(this.field))
     }

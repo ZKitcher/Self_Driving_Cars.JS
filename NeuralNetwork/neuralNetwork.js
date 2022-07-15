@@ -974,12 +974,12 @@ class NEATGenome {
     }
 
     rollMutations() {
+        this.mutationRates.rollMutation = rand(0.01, 1)
         this.mutationRates.connectionRate = rand(0.8, 0.9)
         this.mutationRates.biasRate = rand(0.5, 0.6)
         this.mutationRates.activationRate = rand(0.05, 0.1)
         this.mutationRates.addConnectionRate = rand(0.05, 0.1)
         this.mutationRates.addNodeRate = rand(0.01, 0.05)
-        this.mutationRates.rollMutation = rand(0.01, 1)
     }
 
     addNode() {

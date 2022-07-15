@@ -70,6 +70,9 @@ function keyPressed() {
     if (key === 't') {
         racetrack.getPremadeTrack()
     }
+    if (key === '0') {
+        racetrack.clearTrack()
+    }
 
 }
 
