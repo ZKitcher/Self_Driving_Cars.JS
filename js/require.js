@@ -15,9 +15,8 @@ const urlTree = [
         endpoint: [
             'ray',
             'boundary',
-            'raceTrack',
-            'checkpoint',
             'car',
+            'raceTrack',
         ]
     },
     {
