@@ -198,13 +198,6 @@ class NEATPopulation {
         download(title, JSON.stringify(this.datacollection));
     }
 
-    render() {
-        push();
-        fill(this.styling.fontColour ?? '#000000');
-        text(`Generation: ${this.generation}`, 10, 15);
-        pop();
-    }
-
     reset() {
         this.evaluate()
         this.timer = this.timerCount
@@ -352,6 +345,13 @@ class NEATPopulation {
 
         element = document.getElementById(agent.id);
         document.getElementById(container).append(element);
+    }
+
+    render() {
+        push();
+        fill(this.styling.fontColour ?? '#000000');
+        text(`Generation: ${this.generation}`, 10, 15);
+        pop();
     }
 }
 

@@ -3,13 +3,10 @@ class RaceTrack {
         this.res = 100;
         this.cols = 1 + width / this.res;
         this.rows = 1 + height / this.res;
-        this.checkPoints = []
 
-        // this.field = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], [1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0], [1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0], [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1], [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1], [1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0], [1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0], [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1], [1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0], [1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0], [1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1], [1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1], [1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0], [1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1], [1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1], [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1], [1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0], [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1]]
+        this.field = [];
 
-        this.field = []
-
-        this.getPremadeTrack()
+        this.getPremadeTrack();
 
         // for (let i = 0; i < this.cols; i++) {
         //     this.field[i] = [];
@@ -27,38 +24,37 @@ class RaceTrack {
 
     updateMap(x, y) {
         try {
-            let i = floor(x / this.res);
-            let j = floor(y / this.res);
+            let i = 1 + floor(x / this.res);
+            let j = 1 + floor(y / this.res);
             this.field[i][j] = this.field[i][j] ? 0 : 1;
         }
         catch {
-
         }
-
     }
 
     addToTrack(x, y) {
         try {
-            let i = floor(x / this.res);
-            let j = floor(y / this.res);
+            let i = 1 + floor(x / this.res);
+            let j = 1 + floor(y / this.res);
             this.field[i][j] = 1;
         }
         catch {
-
         }
     }
     removeTrack(x, y) {
         try {
-            let i = floor(x / this.res);
-            let j = floor(y / this.res);
+            let i = 1 + floor(x / this.res);
+            let j = 1 + floor(y / this.res);
             this.field[i][j] = 0;
         }
         catch {
-
         }
     }
 
     clearTrack() {
+        this.cols = 1 + width / this.res;
+        this.rows = 1 + height / this.res;
+
         for (let i = 0; i < this.cols; i++) {
             this.field[i] = [];
             for (let j = 0; j < this.rows; j++) {
@@ -67,12 +63,21 @@ class RaceTrack {
         }
     }
 
+    upRes() {
+        this.res += 25;
+        this.clearTrack();
+    }
+    downRes() {
+        if (this.res <= 25) return;
+        this.res -= 25;
+        this.clearTrack();
+    }
+
     downloadTrack(title = 'RaceTrack') {
         download(title, JSON.stringify(this.field))
     }
 
     update() {
-
     }
 
     getPremadeTrack() {
@@ -104,13 +109,9 @@ class RaceTrack {
     }
 
     render() {
-
         walls = [];
         push()
-        //rectMode(CORNER)
-        fill(125, 125)
-        //this.checkPoints.forEach(e => rect(e.position.x - 50, e.position.y - 50, 100, 100))
-
+        text(`Track Res: ${this.res}`, 100, 15)
         for (let i = 0; i < this.cols - 1; i++) {
             for (let j = 0; j < this.rows - 1; j++) {
                 try {
@@ -177,17 +178,14 @@ class RaceTrack {
                     }
                 }
                 catch {
-
                 }
             }
         }
         pop()
-
     }
 
     drawLine(v1, v2) {
         walls.push(new Boundary(v1.x, v1.y, v2.x, v2.y))
         line(v1.x, v1.y, v2.x, v2.y)
     }
-
 }

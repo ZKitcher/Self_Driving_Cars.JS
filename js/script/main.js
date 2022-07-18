@@ -73,6 +73,13 @@ function keyPressed() {
     if (key === '0') {
         racetrack.clearTrack()
     }
+    if (key === '.') {
+        racetrack.upRes()
+    }
+    if (key === ',') {
+        racetrack.downRes()
+    }
+
 
 }
 
