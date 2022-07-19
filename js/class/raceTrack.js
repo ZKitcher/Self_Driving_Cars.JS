@@ -15,6 +15,8 @@ class RaceTrack {
         //         this.field[i][j] = 0
         //     }
         // }
+
+        this.randomTrack = [];
     }
 
     run() {
@@ -130,15 +132,79 @@ class RaceTrack {
         this.field = track.track;
     }
 
-    addCheckpoint(x, y) {
-        this.checkPoints.push(new Checkpoint(x, y))
+    generateTrack(pointsOnCurve = 10) {
+        this.randomTrack = [];
+
+        let points = [];
+        let x1s = [];
+        let x2s = [];
+        let y1s = [];
+        let y2s = [];
+
+        for (let i = 0; i < pointsOnCurve / 2; i++) {
+            x1s.push(random(50, width - 50));
+            x2s.push(random(50, width - 50));
+            y1s.push(random(50, height - 50));
+            y2s.push(random(10, height - 50));
+        }
+
+        x1s.sort((a, b) => a - b);
+        x2s.sort((a, b) => b - a);
+        y1s.sort((a, b) => a - b);
+        y2s.sort((a, b) => b - a);
+
+        for (let i = 0; i < pointsOnCurve / 2; i++) {
+            points.push(x1s[i], y1s[i]);
+        }
+        for (let i = 0; i < pointsOnCurve / 2; i++) {
+            points.push(x2s[i], y2s[i]);
+        }
+
+        this.randomTrack = [...points]
+
+        this.clearTrack()
+
+        for (let i = 0; i < points.length; i += 2) {
+            let p = [];
+            for (let add = 0; add < 8; add += 1) {
+                if ((i + add) < points.length) {
+                    p.push(points[i + add]);
+                } else {
+                    p.push(points[i + add - points.length]);
+                }
+
+            }
+            curve(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+
+            let steps = 50;
+            for (let i = 0; i <= steps; i++) {
+                let t = i / steps;
+                let x = curvePoint(p[0], p[2], p[4], p[6], t);
+                let y = curvePoint(p[1], p[3], p[5], p[7], t);
+                ellipse(x, y, 5, 5);
+
+                let a = 1 + floor(x / this.res);
+                let b = 1 + floor(y / this.res);
+                this.field[a][b] = 1;
+
+            }
+            p = [];
+        }
+
+
     }
+
 
     getState(a, b, c, d) {
         return a * 8 + b * 4 + c * 2 + d * 1
     }
 
     render() {
+
+        if (this.randomTrack.length) {
+            this.drawCurve(this.randomTrack)
+        }
+
         walls = [];
         push()
         text(`Track Res: ${this.res}`, 100, 15)
@@ -217,5 +283,30 @@ class RaceTrack {
     drawLine(v1, v2) {
         walls.push(new Boundary(v1.x, v1.y, v2.x, v2.y))
         line(v1.x, v1.y, v2.x, v2.y)
+    }
+
+    drawCurve(points) {
+        noFill()
+        for (let i = 0; i < points.length; i += 2) {
+            let p = [];
+            for (let add = 0; add < 8; add += 1) {
+                if ((i + add) < points.length) {
+                    p.push(points[i + add]);
+                } else {
+                    p.push(points[i + add - points.length]);
+                }
+
+            }
+            curve(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+            
+            let steps = 10;
+            for (let i = 0; i <= steps; i++) {
+                let t = i / steps;
+                let x = curvePoint(p[0], p[2], p[4], p[6], t);
+                let y = curvePoint(p[1], p[3], p[5], p[7], t);
+                ellipse(x, y, 5, 5);
+            }
+            p = [];
+        }
     }
 }

@@ -132,17 +132,17 @@ class Car extends NEATAgent {
 
         this.fitness += this.fitness * (avg(this.avgSpeed) / this.maxspeed);
 
-        // let min = Infinity;
-        // cars.agents.forEach(e => {
-        //     if (e.laps > 0) {
-        //         if (e.bestLap < min) min = e.fitness;
-        //     }
-        // });
+        let min = Infinity;
+        cars.agents.forEach(e => {
+            if (e.laps > 0) {
+                if (e.bestLap < min) min = e.bestLap;
+            }
+        });
 
-        // if (min !== Infinity && min === this.bestLap) {
-        //     clog('Adding Lap bonus')
-        //     this.fitness += this.fitness * this.laps * 3
-        // }
+        if (min !== Infinity && min === this.bestLap) {
+            clog('Adding Lap bonus')
+            this.fitness += this.fitness * this.laps * 3
+        }
     }
 
     lapCheck() {
@@ -234,8 +234,8 @@ class Car extends NEATAgent {
             text(this.carSteering.toFixed(2), 10, 80)
             rect(10, 83, 50, 10)
 
-            this.calculateFitness()
-            text(`Fitness: ${this.fitness.toFixed(0)}`, 10, 110)
+            //this.calculateFitness()
+            //text(`Fitness: ${this.fitness.toFixed(0)}`, 10, 110)
 
             fill(this.prediction[0] > 0 ? 'rgb(0,255,0)' : 'rgb(255,0,0)')
             rect(10, 43, abs(this.prediction[0]) * 50, 10)

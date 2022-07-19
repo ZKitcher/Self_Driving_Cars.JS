@@ -79,6 +79,9 @@ function keyPressed() {
     if (key === ',') {
         racetrack.downRes()
     }
+    if (key === 'g') {
+        racetrack.generateTrack()
+    }
 
 
 }
