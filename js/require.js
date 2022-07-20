@@ -13,6 +13,7 @@ const urlTree = [
         baseURL: 'js/class',
         extension: 'js',
         endpoint: [
+            'quadtree',
             'ray',
             'boundary',
             'car',

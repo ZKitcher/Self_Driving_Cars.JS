@@ -141,7 +141,7 @@ class Car extends NEATAgent {
 
         if (min !== Infinity && min === this.bestLap) {
             clog('Adding Lap bonus')
-            this.fitness += this.fitness * this.laps * 3
+            this.fitness += this.fitness * 1.5
         }
     }
 

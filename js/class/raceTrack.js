@@ -132,7 +132,9 @@ class RaceTrack {
         this.field = track.track;
     }
 
-    generateTrack(pointsOnCurve = 10) {
+    generateTrack(pointsOnCurve = 50) {
+        if (this.res < 50) this.setRes(75)
+
         this.randomTrack = [];
 
         let points = [];
@@ -141,17 +143,36 @@ class RaceTrack {
         let y1s = [];
         let y2s = [];
 
+        let divider = height / 2;
+
         for (let i = 0; i < pointsOnCurve / 2; i++) {
-            x1s.push(random(50, width - 50));
-            x2s.push(random(50, width - 50));
-            y1s.push(random(50, height - 50));
-            y2s.push(random(10, height - 50));
+            x1s.push(random(this.res, width - (this.res * 2)));
+            x2s.push(random(this.res, width - (this.res * 2)));
+            y1s.push(random(this.res, divider - this.res));
+            y2s.push(random(divider + this.res, height - (this.res * 2)));
+        }
+
+
+
+        const sortInHalf = (array) => {
+            let half = Math.ceil(array.length / 2);
+            let left = array.slice(0, half);
+            let right = array.slice(half, half.length);
+            rand() < 0.5 ? left.sort((a, b) => b - a) : left.sort((a, b) => a - b);
+            rand() < 0.5 ? right.sort((a, b) => a - b) : right.sort((a, b) => b - a);
+            return [...left, ...right]
         }
 
         x1s.sort((a, b) => a - b);
         x2s.sort((a, b) => b - a);
-        y1s.sort((a, b) => a - b);
-        y2s.sort((a, b) => b - a);
+
+        if (width < 1000) {
+            y1s.sort((a, b) => a - b);
+            y2s.sort((a, b) => b - a);
+        } else {
+            y1s = rand() < 0.5 ? sortInHalf(y1s) : y1s.sort((a, b) => a - b);
+            y2s = rand() < 0.5 ? sortInHalf(y2s) : y2s.sort((a, b) => b - a);
+        }
 
         for (let i = 0; i < pointsOnCurve / 2; i++) {
             points.push(x1s[i], y1s[i]);
@@ -164,6 +185,7 @@ class RaceTrack {
 
         this.clearTrack()
 
+        let steps = 50;
         for (let i = 0; i < points.length; i += 2) {
             let p = [];
             for (let add = 0; add < 8; add += 1) {
@@ -172,26 +194,19 @@ class RaceTrack {
                 } else {
                     p.push(points[i + add - points.length]);
                 }
-
             }
-            curve(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-
-            let steps = 50;
-            for (let i = 0; i <= steps; i++) {
-                let t = i / steps;
+            for (let j = 0; j <= steps; j++) {
+                let t = j / steps;
                 let x = curvePoint(p[0], p[2], p[4], p[6], t);
                 let y = curvePoint(p[1], p[3], p[5], p[7], t);
-                ellipse(x, y, 5, 5);
-
-                let a = 1 + floor(x / this.res);
-                let b = 1 + floor(y / this.res);
-                this.field[a][b] = 1;
-
+                this.field[1 + floor(x / this.res)][1 + floor(y / this.res)] = 1;
+                if (i === 2) {
+                    startingPos.x = floor(x / this.res) * this.res + this.res;
+                    startingPos.y = floor(y / this.res) * this.res + this.res;
+                }
             }
             p = [];
         }
-
-
     }
 
 
@@ -207,6 +222,7 @@ class RaceTrack {
 
         walls = [];
         push()
+        fill('#FFF')
         text(`Track Res: ${this.res}`, 100, 15)
         for (let i = 0; i < this.cols - 1; i++) {
             for (let j = 0; j < this.rows - 1; j++) {
@@ -286,7 +302,9 @@ class RaceTrack {
     }
 
     drawCurve(points) {
+        push()
         noFill()
+        stroke(100, 100, 100, 100);
         for (let i = 0; i < points.length; i += 2) {
             let p = [];
             for (let add = 0; add < 8; add += 1) {
@@ -295,18 +313,10 @@ class RaceTrack {
                 } else {
                     p.push(points[i + add - points.length]);
                 }
-
             }
             curve(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-            
-            let steps = 10;
-            for (let i = 0; i <= steps; i++) {
-                let t = i / steps;
-                let x = curvePoint(p[0], p[2], p[4], p[6], t);
-                let y = curvePoint(p[1], p[3], p[5], p[7], t);
-                ellipse(x, y, 5, 5);
-            }
             p = [];
         }
+        pop()
     }
 }

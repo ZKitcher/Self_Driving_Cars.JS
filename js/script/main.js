@@ -69,18 +69,22 @@ function keyPressed() {
     }
     if (key === 't') {
         racetrack.getPremadeTrack()
+        cars.rerun()
     }
     if (key === '0') {
         racetrack.clearTrack()
     }
     if (key === '.') {
         racetrack.upRes()
+        cars.rerun()
     }
     if (key === ',') {
         racetrack.downRes()
+        cars.rerun()
     }
     if (key === 'g') {
         racetrack.generateTrack()
+        cars.rerun()
     }
 
 
