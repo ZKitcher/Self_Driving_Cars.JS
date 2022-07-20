@@ -53,7 +53,7 @@ class Car extends NEATAgent {
         this.sightLines[6].run(this.position, this.velocity.heading() + 1.5);
         this.sightLines[7].run(this.position, this.velocity.heading() + PI);
 
-        this.siteDistances = this.sightLines.map(e => e.getDistance())
+        this.siteDistances = this.sightLines.map(e => e.getDistance(this.position))
 
         if (this.siteDistances.filter(e => e < 10).length) {
             this.failed = true;
@@ -164,7 +164,7 @@ class Car extends NEATAgent {
     }
 
     networkPrediction() {
-        let inputs = this.siteDistances.map(e => e > 300 ? 1 : (e / 300))
+        let inputs = this.siteDistances.map(e => e > 200 ? 1 : (e / 200))
         inputs.pop()
         inputs.push(this.currentAccel / this.maxspeed)
         inputs.push(this.carSteering / 0.4)
@@ -234,16 +234,11 @@ class Car extends NEATAgent {
             text(this.carSteering.toFixed(2), 10, 80)
             rect(10, 83, 50, 10)
 
-            //this.calculateFitness()
-            //text(`Fitness: ${this.fitness.toFixed(0)}`, 10, 110)
-
             fill(this.prediction[0] > 0 ? 'rgb(0,255,0)' : 'rgb(255,0,0)')
             rect(10, 43, abs(this.prediction[0]) * 50, 10)
 
             fill(0, 0, 0)
             rect(35, 83, this.prediction[1] * 25, 10)
-
-
 
             pop()
         }
@@ -263,7 +258,6 @@ class Car extends NEATAgent {
 
         rotate(this.velocity.heading() + radians(-90));
         rect(0, 0, 10, 20, 3)
-
 
         pop()
     }

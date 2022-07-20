@@ -6,14 +6,11 @@ class Ray {
 
     run(pos, heading) {
         this.position = pos;
-
         this.dir = p5.Vector.fromAngle(heading === 0 ? 0.00000000001 : heading).mult(20);
-
         // this.render();
     }
 
     cast(wall) {
-
         const x1 = wall.a.x;
         const y1 = wall.a.y;
         const x2 = wall.b.x;
@@ -41,11 +38,15 @@ class Ray {
         }
     }
 
-    getDistance() {
+    getDistance(car) {
         let closest = null;
         let record = Infinity;
-        for (let wall of walls) {
+
+        let points = walls.query(new BoundingBox(car.x, car.y, 201, 201));
+
+        for (let wall of points) {
             const pt = this.cast(wall);
+            // wall.flash()
             if (pt) {
                 const d = p5.Vector.dist(this.position, pt);
                 if (d < record) {
@@ -63,9 +64,11 @@ class Ray {
         stroke(255)
 
         let closest = null;
-
         let record = Infinity;
-        for (let wall of walls) {
+
+        let point = walls.getEachItem()
+        
+        for (let wall of point) {
             const pt = this.cast(wall);
             if (pt) {
                 const d = p5.Vector.dist(this.position, pt);

@@ -25,7 +25,6 @@ class NEATPopulation {
         this.eliteAgents = 5;
 
         this.showBrain = true;
-
         this.generateAgentsPool()
 
         if (typeof completedGeneration === 'undefined') {
@@ -35,7 +34,7 @@ class NEATPopulation {
         this.styling = {
             fontColour: null,
         }
-
+        
         this.pause = false;
     }
 

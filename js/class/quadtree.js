@@ -1,4 +1,4 @@
-class Point {
+class QuadPoint {
     constructor(item) {
         this.item = item;
         this.x = item.position.x;
@@ -6,7 +6,7 @@ class Point {
     }
 }
 
-class Rectangle {
+class BoundingBox {
     constructor(x, y, w, h) {
         this.x = x;
         this.y = y;
@@ -45,7 +45,7 @@ class QuadTree {
         this.points = [];
         this.divided = false;
         this.nested = nested;
-        this.maxNesting = 4;
+        this.maxNesting = Infinity;
     }
 
     subdivide() {
@@ -53,19 +53,23 @@ class QuadTree {
         let y = this.boundary.y;
         let w = this.boundary.w;
         let h = this.boundary.h;
-        let ne = new Rectangle(x + w / 2, y - h / 2, w / 2, h / 2);
+        let ne = new BoundingBox(x + w / 2, y - h / 2, w / 2, h / 2);
         this.northeast = new QuadTree(ne, this.capacity, this.nested + 1);
-        let nw = new Rectangle(x - w / 2, y - h / 2, w / 2, h / 2);
+        let nw = new BoundingBox(x - w / 2, y - h / 2, w / 2, h / 2);
         this.northwest = new QuadTree(nw, this.capacity, this.nested + 1);
-        let se = new Rectangle(x + w / 2, y + h / 2, w / 2, h / 2);
+        let se = new BoundingBox(x + w / 2, y + h / 2, w / 2, h / 2);
         this.southeast = new QuadTree(se, this.capacity, this.nested + 1);
-        let sw = new Rectangle(x - w / 2, y + h / 2, w / 2, h / 2);
+        let sw = new BoundingBox(x - w / 2, y + h / 2, w / 2, h / 2);
         this.southwest = new QuadTree(sw, this.capacity, this.nested + 1);
         this.divided = true;
     }
 
     insert(point) {
-        this.addToTree(new Point(point))
+        if (point.position === undefined) {
+            console.error('Point missing .position')
+            return false;
+        }
+        this.addToTree(new QuadPoint(point))
     }
 
     addToTree(point) {
@@ -93,10 +97,12 @@ class QuadTree {
         }
     }
 
-
     query(range) {
-        let found = this.getItemsInArea(range)
-        return found;
+        if (!(range instanceof BoundingBox)) {
+            console.error('"BoundingBox" missing')
+            return false;
+        }
+        return this.getItemsInArea(range) || [];
     }
 
     getItemsInArea(range, found) {
@@ -125,7 +131,6 @@ class QuadTree {
         if (!found) {
             found = [];
         }
-
         for (let p of this.points) {
             found.push(p.item);
         }
@@ -169,7 +174,7 @@ class QuadTree {
         let w = this.boundary.w;
         let h = this.boundary.h;
 
-        let newTree = new QuadTree(new Rectangle(x, y, w, h), this.capacity);
+        let newTree = new QuadTree(new BoundingBox(x, y, w, h), this.capacity);
         tempItems.forEach(e => newTree.insert(e))
 
         return newTree;
@@ -177,6 +182,7 @@ class QuadTree {
 
 
     show() {
+        push()
         stroke(255);
         noFill();
         strokeWeight(1);
@@ -189,5 +195,6 @@ class QuadTree {
             this.southeast.show();
             this.southwest.show();
         }
+        pop()
     }
 }

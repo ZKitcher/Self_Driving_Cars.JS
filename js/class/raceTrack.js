@@ -3,20 +3,10 @@ class RaceTrack {
         this.res = 100;
         this.cols = 1 + width / this.res;
         this.rows = 1 + height / this.res;
-
         this.field = [];
-
-        this.getPremadeTrack();
-
-        // for (let i = 0; i < this.cols; i++) {
-        //     this.field[i] = [];
-        //     for (let j = 0; j < this.rows; j++) {
-        //         // this.field[i][j] = floor(random(2))
-        //         this.field[i][j] = 0
-        //     }
-        // }
-
         this.randomTrack = [];
+
+        this.generateTrack();
     }
 
     run() {
@@ -29,6 +19,7 @@ class RaceTrack {
             let i = 1 + floor(x / this.res);
             let j = 1 + floor(y / this.res);
             this.field[i][j] = this.field[i][j] ? 0 : 1;
+            this.updateBoundary();
         }
         catch {
         }
@@ -39,6 +30,7 @@ class RaceTrack {
             let i = 1 + floor(x / this.res);
             let j = 1 + floor(y / this.res);
             this.field[i][j] = 1;
+            this.updateBoundary();
         }
         catch {
         }
@@ -48,6 +40,7 @@ class RaceTrack {
             let i = 1 + floor(x / this.res);
             let j = 1 + floor(y / this.res);
             this.field[i][j] = 0;
+            this.updateBoundary();
         }
         catch {
         }
@@ -56,13 +49,13 @@ class RaceTrack {
     clearTrack() {
         this.cols = 1 + width / this.res;
         this.rows = 1 + height / this.res;
-
         for (let i = 0; i < this.cols; i++) {
             this.field[i] = [];
             for (let j = 0; j < this.rows; j++) {
                 this.field[i][j] = 0
             }
         }
+        this.updateBoundary();
     }
 
     upRes() {
@@ -88,6 +81,9 @@ class RaceTrack {
     }
 
     getPremadeTrack() {
+        this.clearTrack()
+        this.randomTrack = [];
+
         const tracks = {
             100:
                 [
@@ -121,15 +117,12 @@ class RaceTrack {
         }
 
         const res = random([100, 25]);
-
         this.setRes(res)
-
         let track = random(tracks[res])
-
         startingPos.x = track.startingPos[0];
         startingPos.y = track.startingPos[1];
-
         this.field = track.track;
+        this.updateBoundary();
     }
 
     generateTrack(pointsOnCurve = 50) {
@@ -151,8 +144,6 @@ class RaceTrack {
             y1s.push(random(this.res, divider - this.res));
             y2s.push(random(divider + this.res, height - (this.res * 2)));
         }
-
-
 
         const sortInHalf = (array) => {
             let half = Math.ceil(array.length / 2);
@@ -207,23 +198,13 @@ class RaceTrack {
             }
             p = [];
         }
+
+        this.updateBoundary();
     }
 
+    updateBoundary() {
+        buildWallTree();
 
-    getState(a, b, c, d) {
-        return a * 8 + b * 4 + c * 2 + d * 1
-    }
-
-    render() {
-
-        if (this.randomTrack.length) {
-            this.drawCurve(this.randomTrack)
-        }
-
-        walls = [];
-        push()
-        fill('#FFF')
-        text(`Track Res: ${this.res}`, 100, 15)
         for (let i = 0; i < this.cols - 1; i++) {
             for (let j = 0; j < this.rows - 1; j++) {
                 try {
@@ -240,52 +221,51 @@ class RaceTrack {
                         this.field[i + 1][j + 1],
                         this.field[i][j + 1],
                     )
-                    stroke(255)
-                    strokeWeight(1)
+
                     switch (state) {
                         case 1:
-                            this.drawLine(c, d)
+                            this.addBoundary(c, d)
                             break;
                         case 2:
-                            this.drawLine(b, c)
+                            this.addBoundary(b, c)
                             break;
                         case 3:
-                            this.drawLine(b, d)
+                            this.addBoundary(b, d)
                             break;
                         case 4:
-                            this.drawLine(a, b)
+                            this.addBoundary(a, b)
                             break;
                         case 5:
-                            this.drawLine(a, d)
-                            this.drawLine(b, c)
+                            this.addBoundary(a, d)
+                            this.addBoundary(b, c)
                             break;
                         case 6:
-                            this.drawLine(a, c)
+                            this.addBoundary(a, c)
                             break;
                         case 7:
-                            this.drawLine(a, d)
+                            this.addBoundary(a, d)
                             break;
                         case 8:
-                            this.drawLine(a, d)
+                            this.addBoundary(a, d)
                             break;
                         case 9:
-                            this.drawLine(a, c)
+                            this.addBoundary(a, c)
                             break;
                         case 10:
-                            this.drawLine(a, b)
-                            this.drawLine(c, d)
+                            this.addBoundary(a, b)
+                            this.addBoundary(c, d)
                             break;
                         case 11:
-                            this.drawLine(a, b)
+                            this.addBoundary(a, b)
                             break;
                         case 12:
-                            this.drawLine(b, d)
+                            this.addBoundary(b, d)
                             break;
                         case 13:
-                            this.drawLine(b, c)
+                            this.addBoundary(b, c)
                             break;
                         case 14:
-                            this.drawLine(c, d)
+                            this.addBoundary(c, d)
                             break;
                     }
                 }
@@ -293,12 +273,30 @@ class RaceTrack {
                 }
             }
         }
+    }
+
+    getState(a, b, c, d) {
+        return a * 8 + b * 4 + c * 2 + d * 1
+    }
+
+    render() {
+        if (this.randomTrack.length) {
+            this.drawCurve(this.randomTrack)
+        }
+
+        push()
+        fill('#FFF')
+        text(`Track Res: ${this.res}`, 100, 15)
+        stroke(255)
+        strokeWeight(1)
+        walls.getEachItem().forEach(e => {
+            line(e.a.x, e.a.y, e.b.x, e.b.y)
+        });
         pop()
     }
 
-    drawLine(v1, v2) {
-        walls.push(new Boundary(v1.x, v1.y, v2.x, v2.y))
-        line(v1.x, v1.y, v2.x, v2.y)
+    addBoundary(v1, v2) {
+        walls.insert(new Boundary(v1.x, v1.y, v2.x, v2.y))
     }
 
     drawCurve(points) {
