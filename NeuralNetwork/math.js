@@ -19,6 +19,13 @@ const boxMuller = () => {
     while (v === 0) v = rand();
     return Math.sqrt(-1 * log(u)) * cos(1 * PI * v);
 };
+const unitVector = (x1, y1, x2, y2, steps, step) => {
+    const distance = sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2));
+    return {
+        x: x1 + ((distance / steps) * step / distance) * (x2 - x1),
+        y: y1 + ((distance / steps) * step / distance) * (y2 - y1)
+    };
+}
 
 class Matrix {
     constructor(rows = 0, cols = 0, matrix = null) {
@@ -530,13 +537,17 @@ const minValue = (arr) => {
     return record;
 }
 
-const avg = (arr) => {
-    let sum = 0;
-    let len = arr.length;
-    for (let i = 0; i < len; i++) {
-        sum += arr[i];
+const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+const smoothen = (vector, variance = 0.5) => {
+    var t_avg = avg(vector) * variance;
+    var ret = Array(vector.length);
+    for (var i = 0; i < vector.length; i++) {
+        var prev = i > 0 ? ret[i - 1] : vector[i];
+        var next = i < vector.length ? vector[i] : vector[i - 1];
+        ret[i] = avg([t_avg, avg([prev, vector[i], next])]);
     }
-    return sum / len;
+    return ret;
 }
 
 const lossfuncs = {

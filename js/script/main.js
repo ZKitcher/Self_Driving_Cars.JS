@@ -89,8 +89,9 @@ function keyPressed() {
         racetrack.generateTrack()
         cars.rerun()
     }
-
-
+    if (key === 'c') {
+        createCanvas(window.innerWidth, window.innerHeight);
+    }
 }
 
 function mouseClicked() {

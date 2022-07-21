@@ -4,7 +4,6 @@ class RaceTrack {
         this.cols = 1 + width / this.res;
         this.rows = 1 + height / this.res;
         this.field = [];
-        this.randomTrack = [];
 
         this.generateTrack();
     }
@@ -82,7 +81,7 @@ class RaceTrack {
 
     getPremadeTrack() {
         this.clearTrack()
-        this.randomTrack = [];
+        this.points = [];
 
         const tracks = {
             100:
@@ -128,15 +127,13 @@ class RaceTrack {
     generateTrack(pointsOnCurve = 50) {
         if (this.res < 50) this.setRes(75)
 
-        this.randomTrack = [];
+        let divider = height / 2;
 
         let points = [];
         let x1s = [];
         let x2s = [];
         let y1s = [];
         let y2s = [];
-
-        let divider = height / 2;
 
         for (let i = 0; i < pointsOnCurve / 2; i++) {
             x1s.push(random(this.res, width - (this.res * 2)));
@@ -166,37 +163,42 @@ class RaceTrack {
         }
 
         for (let i = 0; i < pointsOnCurve / 2; i++) {
-            points.push(x1s[i], y1s[i]);
+            points.push({
+                x: x1s[i],
+                y: y1s[i]
+            });
         }
         for (let i = 0; i < pointsOnCurve / 2; i++) {
-            points.push(x2s[i], y2s[i]);
+            points.push({
+                x: x2s[i],
+                y: y2s[i]
+            });
         }
-
-        this.randomTrack = [...points]
-
+        
         this.clearTrack()
 
         let steps = 50;
-        for (let i = 0; i < points.length; i += 2) {
-            let p = [];
-            for (let add = 0; add < 8; add += 1) {
-                if ((i + add) < points.length) {
-                    p.push(points[i + add]);
-                } else {
-                    p.push(points[i + add - points.length]);
-                }
-            }
+        for (let i = 0; i < points.length - 1; i++) {
+            let x1 = points[i].x;
+            let y1 = points[i].y;
+            let x2 = points[i + 1].x;
+            let y2 = points[i + 1].y;
+
             for (let j = 0; j <= steps; j++) {
-                let t = j / steps;
-                let x = curvePoint(p[0], p[2], p[4], p[6], t);
-                let y = curvePoint(p[1], p[3], p[5], p[7], t);
-                this.field[1 + floor(x / this.res)][1 + floor(y / this.res)] = 1;
+                let p3 = unitVector(x1, y1, x2, y2, steps, j)
+                this.field[1 + floor(p3.x / this.res)][1 + floor(p3.y / this.res)] = 1;
                 if (i === 2) {
-                    startingPos.x = floor(x / this.res) * this.res + this.res;
-                    startingPos.y = floor(y / this.res) * this.res + this.res;
+                    startingPos.x = floor(p3.x / this.res) * this.res + this.res;
+                    startingPos.y = floor(p3.y / this.res) * this.res + this.res;
                 }
             }
-            p = [];
+        }
+
+        let p1 = points[0];
+        let p2 = points[points.length - 1];
+        for (let j = 0; j <= steps; j++) {
+            let p3 = unitVector(p1.x, p1.y, p2.x, p2.y, steps, j)
+            this.field[1 + floor(p3.x / this.res)][1 + floor(p3.y / this.res)] = 1;
         }
 
         this.updateBoundary();
@@ -280,10 +282,6 @@ class RaceTrack {
     }
 
     render() {
-        if (this.randomTrack.length) {
-            this.drawCurve(this.randomTrack)
-        }
-
         push()
         fill('#FFF')
         text(`Track Res: ${this.res}`, 100, 15)
@@ -297,24 +295,5 @@ class RaceTrack {
 
     addBoundary(v1, v2) {
         walls.insert(new Boundary(v1.x, v1.y, v2.x, v2.y))
-    }
-
-    drawCurve(points) {
-        push()
-        noFill()
-        stroke(100, 100, 100, 100);
-        for (let i = 0; i < points.length; i += 2) {
-            let p = [];
-            for (let add = 0; add < 8; add += 1) {
-                if ((i + add) < points.length) {
-                    p.push(points[i + add]);
-                } else {
-                    p.push(points[i + add - points.length]);
-                }
-            }
-            curve(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-            p = [];
-        }
-        pop()
     }
 }
