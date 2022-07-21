@@ -140,7 +140,7 @@ class Car extends NEATAgent {
         });
 
         if (min !== Infinity && min === this.bestLap) {
-            this.fitness += this.fitness * 1.5
+            this.fitness += this.fitness * 0.2
         }
     }
 

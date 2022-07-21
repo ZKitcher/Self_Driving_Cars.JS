@@ -1,0 +1,2 @@
+- average out and smoothen gradients for randomised track generation. //reduce chances of spiked tracks on end of screen turns
+- add NEATPopulation function to mutate x attribute by x % throughout the populace. ie: pop.mutateThroughout('output', 'tanh', 30) // change 30% of the populations output functions to tanh
