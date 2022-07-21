@@ -7,13 +7,13 @@ const urlTree = [
             'math',
             'neuralNetwork',
             'population',
+            'quadtree',
         ]
     },
     {
         baseURL: 'js/class',
         extension: 'js',
         endpoint: [
-            'quadtree',
             'ray',
             'boundary',
             'car',

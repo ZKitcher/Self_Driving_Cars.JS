@@ -140,7 +140,6 @@ class Car extends NEATAgent {
         });
 
         if (min !== Infinity && min === this.bestLap) {
-            clog('Adding Lap bonus')
             this.fitness += this.fitness * 1.5
         }
     }
@@ -159,7 +158,6 @@ class Car extends NEATAgent {
             };
             this.lapTime = 0;
             this.laps++;
-            clog('LAP COMPLETED!', this.laps)
         }
     }
 

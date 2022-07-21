@@ -7,7 +7,7 @@ let target;
 let startingPos = { x: 150, y: 200 }
 
 const buildWallTree = () => {
-    walls = new QuadTree(new BoundingBox(0, 0, width, height), 10);
+    walls = new QuadTree(new BoundingBox(0, 0, width * 2, height * 2), 10);
 }
 
 function setup() {
@@ -16,20 +16,15 @@ function setup() {
     racetrack = new RaceTrack();
     cars = new NEATPopulation(Car, 100)
     cars.styling.fontColour = '#FFF'
-    // cars.eliteAgents = 5;
 
     // cars = new Car()
 }
 
 function draw() {
     push()
-    
     background(51);
-    
     pop()
-
     run()
-
 }
 
 const run = () => {
