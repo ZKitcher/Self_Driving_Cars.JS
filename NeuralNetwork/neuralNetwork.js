@@ -827,8 +827,15 @@ class NEATNode {
         rand() < 0.05 ? this.bias = rand(-1, 1) : this.bias += rand(-magnitude, magnitude);
     }
 
-    mutateActivation() {
-        this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
+    mutateActivation(actFunc) {
+        if (actFunc === undefined) {
+            this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
+        } else if (activations[actFunc] !== undefined) {
+            this.activation = actFunc;
+        }else{
+            NetworkError.warn(`Provided Activation function "${actFunc}" not listed, assigning random`, 'NEATNode.mutateActivation');
+            this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
+        }
     }
 
     isConnectedTo(node) {

@@ -34,7 +34,7 @@ class NEATPopulation {
         this.styling = {
             fontColour: null,
         }
-        
+
         this.pause = false;
     }
 
@@ -191,6 +191,27 @@ class NEATPopulation {
         } else {
             NetworkError.error('Neither a bool or number provided.')
         }
+    }
+
+    mutateOutputActivation(activation, percentage) {
+        if (isNumber(percentage)) {
+            if (percentage > 1) {
+                NetworkError.warn('Percentage is between 0 and 1, setting value to 1', 'NEATPopulation.mutateOutputActivation');
+                percentage = 1;
+            }
+            if (percentage < 0) {
+                NetworkError.warn('Percentage is between 0 and 1, setting value to 0', 'NEATPopulation.mutateOutputActivation');
+                percentage = 0;
+            }
+        }
+        if (percentage === undefined) percentage = false;
+        this.agents.forEach(e => {
+            e.brain.nodes.forEach(f => {
+                if (rand() < (percentage !== false ? percentage : e.brain.mutationRates.activationRate)) {
+                    f.mutateActivation(activation)
+                }
+            })
+        })
     }
 
     downloadDataset(title = 'Dataset') {

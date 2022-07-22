@@ -45,7 +45,7 @@ const run = () => {
     text(`Pause: P`, 10, height - 63);
     text(`Draw Brain: B`, 10, height - 52);
     text(`New Start Pos: S`, 10, height - 41);
-    text(`Random Track: T`, 10, height - 30);
+    text(`Premade Track: T`, 10, height - 30);
     text(`Add Track: +`, 10, height - 19);
     text(`Remove Track: -`, 10, height - 8);
     pop()
