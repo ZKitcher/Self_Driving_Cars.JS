@@ -1,9 +1,10 @@
 class Car extends NEATAgent {
     constructor(brain, x = 150, y = 200) {
         super(brain);
+        this.position = createVector(startingPos.x, startingPos.y);
         this.acceleration = createVector(0, 0);
         this.velocity = createVector(0, 0);
-        this.position = createVector(startingPos.x, startingPos.y);
+
         this.maxspeed = 10;
         this.turningRadius = 0.04
 
@@ -58,13 +59,14 @@ class Car extends NEATAgent {
         if (this.siteDistances.filter(e => e < 10).length) {
             this.failed = true;
             this.done = true;
-            this.score *= 0.75
+            this.score *= 0.75;
             return;
         }
 
         if (this.score < 0 || this.currentAccel < 0.5 && this.timeAlive > 10) {
             this.failed = true;
             this.done = true;
+            this.score *= 0.5;
             return;
         }
 
@@ -78,28 +80,29 @@ class Car extends NEATAgent {
         // }
         // if (keyIsDown(DOWN_ARROW)) {
         //     if (this.currentAccel > 0) {
-        //         this.currentAccel -= 0.1;
+        //         this.currentAccel += -0.3;
         //     }
         // }
         // if (!keyIsDown(UP_ARROW) && !keyIsDown(DOWN_ARROW)) {
-        //     this.currentAccel -= 0.05;
+        //     this.currentAccel += -0.05;
         // }
         // if (keyIsDown(LEFT_ARROW)) {
         //     if (this.currentAccel > 0) {
-        //         this.carSteering -= 0.05;
+        //         this.carSteering += -0.04;
         //     }
         // }
         // if (keyIsDown(RIGHT_ARROW)) {
         //     if (this.currentAccel > 0) {
-        //         this.carSteering += 0.05;
+        //         this.carSteering += 0.04;
         //     }
         // }
         // if (!keyIsDown(LEFT_ARROW) && !keyIsDown(RIGHT_ARROW)) {
         //     this.carSteering = 0;
         // }
 
-        if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
         this.networkPrediction()
+
+        if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
 
         if (this.currentAccel < 0) {
             this.currentAccel = 0;
@@ -114,8 +117,10 @@ class Car extends NEATAgent {
             this.carSteering = 0
         }
 
-        this.applyForce(this.gas(this.velocity.heading()));
-        this.setSteering(this.carSteering)
+        this.gas(
+            this.velocity.heading() + this.carSteering
+        )
+
         this.velocity
             .add(this.acceleration)
             .limit(this.maxspeed);
@@ -169,32 +174,12 @@ class Car extends NEATAgent {
 
         this.prediction = this.brain.predict(inputs).map(e => e > 1 ? 1 : e);
 
-        this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.5;
+        this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.3;
         this.carSteering += this.prediction[1] * 0.04;
     }
 
     applyForce(force) {
         this.acceleration.add(force);
-    }
-
-    seek(target) {
-        let desired = p5.Vector
-            .sub(target, this.position)
-            .normalize()
-            .mult(this.maxspeed)
-
-        let steer = p5.Vector
-            .sub(desired, this.velocity)
-            .limit(this.maxforce);
-
-        return steer;
-    }
-
-    setSteering(value) {
-        let heading = this.velocity.heading();
-
-        if (value)
-            this.applyForce(this.gas(heading + value));
     }
 
     gas(heading) {
@@ -213,7 +198,7 @@ class Car extends NEATAgent {
 
         let steer = p5.Vector.sub(sum, this.velocity);
         steer.limit(this.maxforce);
-        return steer;
+        this.applyForce(steer);
     }
 
 

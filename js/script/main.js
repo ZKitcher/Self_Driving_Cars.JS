@@ -1,4 +1,4 @@
-
+// let myCar;
 let cars;
 let racetrack;
 let walls;
@@ -17,7 +17,7 @@ function setup() {
     cars = new NEATPopulation(Car, 100)
     cars.styling.fontColour = '#FFF'
 
-    // cars = new Car()
+    // myCar = new Car()
 }
 
 function draw() {
@@ -29,6 +29,7 @@ function draw() {
 
 const run = () => {
     cars.run();
+    // myCar.run();
     racetrack.run();
 
     if (keyIsDown(187)) {
