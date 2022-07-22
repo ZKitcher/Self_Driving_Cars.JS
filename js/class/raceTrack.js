@@ -174,7 +174,7 @@ class RaceTrack {
                 y: y2s[i]
             });
         }
-        
+
         this.clearTrack()
 
         let steps = 50;
@@ -187,7 +187,7 @@ class RaceTrack {
             for (let j = 0; j <= steps; j++) {
                 let p3 = unitVector(x1, y1, x2, y2, steps, j)
                 this.field[1 + floor(p3.x / this.res)][1 + floor(p3.y / this.res)] = 1;
-                if (i === 2) {
+                if (i === 5) {
                     startingPos.x = floor(p3.x / this.res) * this.res + this.res;
                     startingPos.y = floor(p3.y / this.res) * this.res + this.res;
                 }
@@ -201,7 +201,49 @@ class RaceTrack {
             this.field[1 + floor(p3.x / this.res)][1 + floor(p3.y / this.res)] = 1;
         }
 
+        this.removeJaggered()
         this.updateBoundary();
+    }
+
+    removeJaggered(iteration = 0) {
+        let cleared = false;
+        for (let i = 0; i < this.field.length; i++) {
+            let e = this.field[i]
+            if (!~e.indexOf(1)) continue;
+            this.field[i] = e.map((f, j) => {
+                if (!f) return 0;
+                let up = this.field[i - 1][j];
+                let right = e[j + 1];
+                let down = this.field[i + 1][j];
+                let left = e[j - 1];
+                if (up + down + left + right === 1) {
+                    cleared = true;
+                    return 0;
+                }
+                return 1;
+            })
+        }
+        if (cleared) {
+            if (iteration === 0) {
+                iteration++;
+                this.removeJaggered(iteration)
+            } else if (cleared) {
+                this.generateTrack();
+            }
+        }
+        for (let i = 0; i < this.field.length; i++) {
+            if (!~this.field[i].indexOf(1)) continue;
+            for (let j = 0; j < this.field[i].length; j++) {
+                if (!this.field[i][j]) continue;
+                let p1 = this.field[i][j];
+                let p2 = this.field[i][j + 1];
+                let p3 = this.field[i + 1][j];
+                let p4 = this.field[i + 1][j + 1];
+                if (p1 + p2 + p3 + p4 === 4) {
+                    this.generateTrack();
+                }
+            }
+        }
     }
 
     updateBoundary() {
