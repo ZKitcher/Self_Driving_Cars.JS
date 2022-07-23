@@ -1,9 +1,9 @@
 class Car extends NEATAgent {
     constructor(brain, x = 150, y = 200) {
         super(brain);
-        this.position = createVector(startingPos.x, startingPos.y);
-        this.acceleration = createVector(0, 0);
-        this.velocity = createVector(0, 0);
+        // this.position = createVector(startingPos.x, startingPos.y);
+        // this.acceleration = createVector(0, 0);
+        // this.velocity = createVector(0, 0);
 
         this.maxspeed = 10;
         this.turningRadius = 0.04
@@ -28,6 +28,28 @@ class Car extends NEATAgent {
         this.config = {
             showSightLines: false
         }
+
+
+
+        // CAR MOTION
+        this.turnRateStatic = 0.08;
+        this.turnRateDynamic = 0.03;
+        this.turnRate = this.turnRateStatic;
+        this.gripStatic = 1.5;
+        this.gripDynamic = 0.5;
+        this.DRIFT_CONSTANT = 3;
+
+        this.position = createVector(startingPos.x, startingPos.y);
+        this.acceleration = createVector(0, 0);
+        this.velocity = createVector(0, 0);
+        this.angle = -1.56;
+        this.mass = 10;
+        this.currentAcceleration = 0.15;
+        this.isDrifting = false;
+
+        this.trail = [];
+
+        this.speed = 0;
     }
 
     run() {
@@ -37,7 +59,7 @@ class Car extends NEATAgent {
 
     update() {
         if (this.done) return;
-        this.lapCheck();
+        // this.lapCheck();
         this.timeAlive++;
         this.checkpointTimer--;
         this.getSiteLines()
@@ -49,90 +71,130 @@ class Car extends NEATAgent {
             return;
         }
 
-        if (this.score < 0 || this.currentAccel < 0.5 && this.timeAlive > 10) {
+        if (this.speed < 2 && this.timeAlive > 100) {
             this.failed = true;
             this.done = true;
             this.score *= 0.5;
             return;
         }
 
-        if (this.currentAccel > 2) this.score++;
+        if (this.speed > 2) this.score++;
         this.lapTime++;
 
-        this.avgSpeed.push(this.currentAccel)
-
-        // if (keyIsDown(UP_ARROW)) {
-        //     this.currentAccel += 0.1;
-        // }
-        // if (keyIsDown(DOWN_ARROW)) {
-        //     if (this.currentAccel > 0) {
-        //         this.currentAccel += -0.3;
-        //     }
-        // }
-        // if (!keyIsDown(UP_ARROW) && !keyIsDown(DOWN_ARROW)) {
-        //     this.currentAccel += -0.05;
-        // }
-        // if (keyIsDown(LEFT_ARROW)) {
-        //     if (this.currentAccel > 0) {
-        //         this.carSteering += -0.04;
-        //     }
-        // }
-        // if (keyIsDown(RIGHT_ARROW)) {
-        //     if (this.currentAccel > 0) {
-        //         this.carSteering += 0.04;
-        //     }
-        // }
-        // if (!keyIsDown(LEFT_ARROW) && !keyIsDown(RIGHT_ARROW)) {
-        //     this.carSteering = 0;
-        // }
+        this.avgSpeed.push(this.speed)
 
         this.networkPrediction()
-
-        if (this.currentAccel > this.maxspeed) this.currentAccel = this.maxspeed;
-
-        if (this.currentAccel < 0) {
-            this.currentAccel = 0;
-            this.carSteering = 0;
-        } else if (this.currentAccel > 0.5) {
-            if (this.carSteering > this.turningRadius) this.carSteering = this.turningRadius;
-            if (this.carSteering < -this.turningRadius) this.carSteering = -this.turningRadius;
-            this.currentAccel -= 0.001;
-            if (this.carSteering > 0) this.carSteering -= 0.001
-            if (this.carSteering < 0) this.carSteering += 0.001
-        } else {
-            this.carSteering = 0
-        }
-
-        this.gas(
-            this.velocity.heading() + this.carSteering
-        )
-
-        this.velocity
-            .add(this.acceleration)
-            .limit(this.maxspeed);
-
-        this.position
-            .add(this.velocity);
-
-        this.acceleration
-            .mult(0);
+        this.updateMotion()
     }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    getPos() {
+        return this.position.copy();
+    }
+    isDrift() {
+        return this.isDrifting;
+    }
+
+    updateMotion() {
+        // if (keyIsPressed) {
+        //     if (keyIsDown(UP_ARROW)) {
+        //         this.adjustVelocity(this.currentAcceleration)
+        //     }
+        //     if (keyIsDown(DOWN_ARROW)) {
+        //         this.adjustVelocity(-this.currentAcceleration)
+        //     }
+        //     if (keyIsDown(LEFT_ARROW)) {
+        //         this.angle -= this.turnRate;
+        //     }
+        //     if (keyIsDown(RIGHT_ARROW)) {
+        //         this.angle += this.turnRate;
+        //     }
+        // }
+
+        this.trail.push({
+            position: this.getPos(),
+            drifting: this.isDrift(),
+        });
+
+
+        let vB = this.vectWorldToBody(this.velocity, this.angle);
+
+        let bodyFixedDrag;
+        let grip;
+        if (abs(vB.x) < this.DRIFT_CONSTANT) {
+            grip = this.gripStatic
+            this.turnRate = this.turnRateStatic;
+            this.isDrifting = false;
+        } else {
+            grip = this.gripDynamic;
+            this.turnRate = this.turnRateDynamic;
+            this.isDrifting = true;
+        }
+        bodyFixedDrag = createVector(vB.x * -grip, vB.y * 0.05);
+
+        let worldFixedDrag = this.vectBodyToWorld(bodyFixedDrag, this.angle)
+        this.acceleration.add(
+            worldFixedDrag.div(this.mass)
+        );
+
+        this.angle = this.angle % TWO_PI;
+        this.velocity.add(this.acceleration);
+        this.position.add(this.velocity);
+        this.speed = p5.Vector.dist(this.acceleration, this.velocity);
+        this.acceleration = createVector(0, 0);
+
+    }
+
+
+    adjustVelocity(accel = this.currentAcceleration) {
+        this.acceleration
+            .add(
+                this.vectBodyToWorld(
+                    createVector(0, accel),
+                    this.angle
+                )
+            );
+    }
+
+    vectBodyToWorld(vect, ang) {
+        let v = vect.copy();
+        let vn = createVector(
+            v.x * cos(ang) - v.y * sin(ang),
+            v.x * sin(ang) + v.y * cos(ang)
+        );
+        return vn;
+    }
+
+    vectWorldToBody(vect, ang) {
+        let v = vect.copy();
+        let vn = createVector(
+            v.x * cos(ang) + v.y * sin(ang),
+            v.x * sin(ang) - v.y * cos(ang)
+        );
+        return vn;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
     calculateFitness() {
         this.fitness = this.score;
 
-        this.fitness += this.fitness * (avg(this.avgSpeed) / this.maxspeed);
+        // this.fitness += this.fitness * (avg(this.avgSpeed) / this.maxspeed);
+        this.fitness += this.fitness * (this.trail.filter(e => e.drifting).length / this.trail.length);
 
-        let min = Infinity;
-        cars.agents.forEach(e => {
-            if (e.laps > 0) {
-                if (e.bestLap < min) min = e.bestLap;
-            }
-        });
+        // let min = Infinity;
+        // cars.agents.forEach(e => {
+        //     if (e.laps > 0) {
+        //         if (e.bestLap < min) min = e.bestLap;
+        //     }
+        // });
 
-        if (min !== Infinity && min === this.bestLap) {
-            this.fitness += this.fitness * 0.2
-        }
+        // if (min !== Infinity && min === this.bestLap) {
+        //     this.fitness += this.fitness * 0.2
+        // }
     }
 
     getSiteLines() {
@@ -185,46 +247,55 @@ class Car extends NEATAgent {
 
         this.prediction = this.brain.predict(inputs).map(e => e > 1 ? 1 : e < -1 ? -1 : e);
 
-        this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.3;
-        this.carSteering += this.prediction[1] * 0.04;
-    }
+        // this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.3;
+        // this.carSteering += this.prediction[1] * 0.04;
 
-    applyForce(force) {
-        this.acceleration.add(force);
-    }
-
-    gas(heading) {
-        let sum = createVector(0, 0);
-        let newDir = p5.Vector.fromAngle(heading);
-
-        if (this.currentAccel === 0) {
+        if (this.prediction[0] < 0 && this.speed === 0) {
+            this.failed = true;
+            this.done = true;
+            this.score *= 0.5;
             return;
         }
 
-        sum
-            .add(newDir)
-            .div(1)
-            .normalize()
-            .mult(this.currentAccel)
+        this.adjustVelocity(this.prediction[0] * this.currentAcceleration);
 
-        let steer = p5.Vector.sub(sum, this.velocity);
-        steer.limit(this.maxforce);
-        this.applyForce(steer);
+        this.angle += (this.prediction[1] * this.turnRate) * (this.prediction[0] < 0 ? 0.3 : 1);
     }
 
+    // applyForce(force) {
+    //     this.acceleration.add(force);
+    // }
+
+    // gas(heading) {
+    //     let sum = createVector(0, 0);
+    //     let newDir = p5.Vector.fromAngle(heading);
+
+    //     if (this.currentAccel === 0) {
+    //         return;
+    //     }
+
+    //     sum
+    //         .add(newDir)
+    //         .div(1)
+    //         .normalize()
+    //         .mult(this.currentAccel)
+
+    //     let steer = p5.Vector.sub(sum, this.velocity);
+    //     steer.limit(this.maxforce);
+    //     this.applyForce(steer);
+    // }
+
     render() {
-        //angleMode(RADIANS);
 
         if (this.topAgent && this.prediction) {
             push()
 
             fill(255);
-            text('Acceleration', 10, 30)
-            text(this.currentAccel.toFixed(2), 10, 40)
+            text('Speed', 10, 30)
+            text(this.speed.toFixed(2), 10, 40)
             rect(10, 43, 50, 10)
 
             text('Turning', 10, 70)
-            text(this.carSteering.toFixed(2), 10, 80)
             rect(10, 83, 50, 10)
 
             fill(this.prediction[0] > 0 ? 'rgb(0,255,0)' : 'rgb(255,0,0)')
@@ -242,19 +313,30 @@ class Car extends NEATAgent {
 
         if (this.topAgent) {
             fill(100, 0, 0, 127);
+            push();
+            for (let p of this.trail) {
+                if (p.drifting) {
+                    stroke(255, 100, 100);
+                } else {
+                    stroke(255);
+                }
+                point(p.position.x, p.position.y);
+            }
+            pop()
+
         } else if (this.eliteAgent) {
             fill(0, 0, 100, 127);
         }
 
         stroke(200);
         translate(this.position.x, this.position.y);
-
-        rotate(this.velocity.heading() + radians(-90));
+        rotate(this.angle);
         rect(0, 0, 10, 20, 3)
-
+        strokeWeight(3)
+        point(4, 10)
+        point(-4, 10)
         pop()
     }
-
 }
 
 const intersection = (position, line2, dir) => {

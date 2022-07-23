@@ -45,7 +45,7 @@ const run = () => {
 
 const renderText = () => {
     const textLabel = [
-        `Evaluate: R`,
+        `Evaluate: E`,
         `Restart: Q`,
         `Pause: P`,
         `Draw Brain: B`,
@@ -70,7 +70,7 @@ const renderText = () => {
 
 
 function keyPressed() {
-    if (key === 'r') {
+    if (key === 'e') {
         cars.reset()
     }
     if (key === 'q') {
