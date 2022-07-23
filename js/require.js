@@ -14,7 +14,6 @@ const urlTree = [
         baseURL: 'js/class',
         extension: 'js',
         endpoint: [
-            'ray',
             'boundary',
             'car',
             'raceTrack',

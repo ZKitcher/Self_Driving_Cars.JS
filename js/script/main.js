@@ -39,16 +39,32 @@ const run = () => {
         racetrack.removeTrack(mouseX, mouseY)
     }
 
+    renderText()
+    
+}
+
+const renderText = () => {
+    const textLabel = [
+        `Evaluate: R`,
+        `Restart: Q`,
+        `Pause: P`,
+        `Draw Brain: B`,
+        `New Start Pos: S`,
+        `Generate Random Track: G`,
+        `Premade Track: T`,
+        `Clear Track: 0`,
+        `+25 Track Resolution: >`,
+        `-25 Track Resolution: <`,
+        `Add Track: +`,
+        `Remove Track: -`,
+        `Toggle Sight lines: A`,
+        `Resize canvase to window: C`,
+    ]
     push()
     fill('#FFF')
-    text(`Reset: R`, 10, height - 85);
-    text(`Restart: Q`, 10, height - 74);
-    text(`Pause: P`, 10, height - 63);
-    text(`Draw Brain: B`, 10, height - 52);
-    text(`New Start Pos: S`, 10, height - 41);
-    text(`Premade Track: T`, 10, height - 30);
-    text(`Add Track: +`, 10, height - 19);
-    text(`Remove Track: -`, 10, height - 8);
+    textLabel.reverse().forEach((e, i) => {
+        text(e, 10, height - (13 * (i + 1)));
+    })
     pop()
 }
 
@@ -92,6 +108,9 @@ function keyPressed() {
     }
     if (key === 'c') {
         createCanvas(window.innerWidth, window.innerHeight);
+    }
+    if (key === 'a') {
+        cars.agents.forEach(e => e.config.showSightLines = !e.config.showSightLines);
     }
 }
 

@@ -34,6 +34,7 @@ class RaceTrack {
         catch {
         }
     }
+    
     removeTrack(x, y) {
         try {
             let i = 1 + floor(x / this.res);
@@ -61,6 +62,7 @@ class RaceTrack {
         this.res += 25;
         this.clearTrack();
     }
+
     downRes() {
         if (this.res <= 25) return;
         this.res -= 25;
@@ -125,6 +127,8 @@ class RaceTrack {
     }
 
     generateTrack(pointsOnCurve = 50) {
+        this.clearTrack();
+
         if (this.res < 50) this.setRes(75)
 
         let divider = height / 2;
@@ -175,8 +179,6 @@ class RaceTrack {
             });
         }
 
-        this.clearTrack()
-
         let steps = 50;
         for (let i = 0; i < points.length - 1; i++) {
             let x1 = points[i].x;
@@ -208,38 +210,37 @@ class RaceTrack {
     removeJaggered(iteration = 0) {
         let cleared = false;
         for (let i = 0; i < this.field.length; i++) {
-            let e = this.field[i]
-            if (!~e.indexOf(1)) continue;
-            this.field[i] = e.map((f, j) => {
+            if (!~this.field[i].indexOf(1)) continue;
+            this.field[i] = this.field[i].map((f, j) => {
                 if (!f) return 0;
-                let up = this.field[i - 1][j];
-                let right = e[j + 1];
-                let down = this.field[i + 1][j];
-                let left = e[j - 1];
-                if (up + down + left + right === 1) {
+                if (
+                    this.field[i - 1][j] +
+                    this.field[i][j + 1] +
+                    this.field[i + 1][j] +
+                    this.field[i][j - 1] === 1
+                ) {
                     cleared = true;
                     return 0;
                 }
                 return 1;
             })
         }
-        if (cleared) {
-            if (iteration === 0) {
-                iteration++;
-                this.removeJaggered(iteration)
-            } else if (cleared) {
-                this.generateTrack();
-            }
+        if (cleared && iteration === 0) {
+            iteration++;
+            this.removeJaggered(iteration)
+        } else if (cleared) {
+            this.generateTrack();
         }
         for (let i = 0; i < this.field.length; i++) {
             if (!~this.field[i].indexOf(1)) continue;
             for (let j = 0; j < this.field[i].length; j++) {
                 if (!this.field[i][j]) continue;
-                let p1 = this.field[i][j];
-                let p2 = this.field[i][j + 1];
-                let p3 = this.field[i + 1][j];
-                let p4 = this.field[i + 1][j + 1];
-                if (p1 + p2 + p3 + p4 === 4) {
+                if (
+                    this.field[i][j] +
+                    this.field[i][j + 1] +
+                    this.field[i + 1][j] +
+                    this.field[i + 1][j + 1] === 4
+                ) {
                     this.generateTrack();
                 }
             }

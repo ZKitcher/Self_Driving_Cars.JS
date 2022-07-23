@@ -13,13 +13,7 @@ class Car extends NEATAgent {
         this.currentAccel = 0;
         this.carSteering = 0;
 
-        this.sightLines = []
-
-        for (let i = 0; i < 8; i++) {
-            this.sightLines.push(new Ray(this.position.x, this.position.y))
-        }
-
-        this.siteDistances = []
+        this.siteLines = []
         this.timeAlive = 0;
 
         this.laps = 0;
@@ -30,6 +24,10 @@ class Car extends NEATAgent {
         this.avgSpeed = []
 
         this.checkpointTimer = 180;
+
+        this.config = {
+            showSightLines: false
+        }
     }
 
     run() {
@@ -39,24 +37,12 @@ class Car extends NEATAgent {
 
     update() {
         if (this.done) return;
-
         this.lapCheck();
-
         this.timeAlive++;
         this.checkpointTimer--;
+        this.getSiteLines()
 
-        this.sightLines[0].run(this.position, this.velocity.heading() - 1.5);
-        this.sightLines[1].run(this.position, this.velocity.heading() - 1);
-        this.sightLines[2].run(this.position, this.velocity.heading() - 0.5);
-        this.sightLines[3].run(this.position, this.velocity.heading());
-        this.sightLines[4].run(this.position, this.velocity.heading() + 0.5);
-        this.sightLines[5].run(this.position, this.velocity.heading() + 1);
-        this.sightLines[6].run(this.position, this.velocity.heading() + 1.5);
-        this.sightLines[7].run(this.position, this.velocity.heading() + PI);
-
-        this.siteDistances = this.sightLines.map(e => e.getDistance(this.position))
-
-        if (this.siteDistances.filter(e => e < 10).length) {
+        if (this.siteLines.filter(e => e < 10).length) {
             this.failed = true;
             this.done = true;
             this.score *= 0.75;
@@ -149,6 +135,31 @@ class Car extends NEATAgent {
         }
     }
 
+    getSiteLines() {
+        const points = walls.query(new BoundingBox(this.position.x, this.position.y, 201, 201));
+        const dir = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5, PI];
+
+        this.siteLines = dir.map(e => {
+            let record = Infinity;
+            let closest = null;
+            for (let wall of points) {
+                const dir = this.velocity.heading() + e
+                const pt = intersection(this.position, wall, p5.Vector.fromAngle(dir === 0 ? 0.00000000001 : dir));
+
+                if (pt) {
+                    const d = p5.Vector.dist(this.position, pt);
+                    if (d < record) {
+                        record = d;
+                        closest = pt;
+                    }
+                }
+            }
+
+            if (this.config.showSightLines && closest) line(this.position.x, this.position.y, closest.x, closest.y)
+            return record;
+        })
+    }
+
     lapCheck() {
         let distanceFromStart = dist(this.startingPos.x, this.startingPos.y, this.position.x, this.position.y);
 
@@ -167,12 +178,12 @@ class Car extends NEATAgent {
     }
 
     networkPrediction() {
-        let inputs = this.siteDistances.map(e => e > 200 ? 1 : (e / 200))
+        let inputs = this.siteLines.map(e => e > 200 ? 1 : (e / 200))
         inputs.pop()
         inputs.push(this.currentAccel / this.maxspeed)
         inputs.push(this.carSteering / 0.4)
 
-        this.prediction = this.brain.predict(inputs).map(e => e > 1 ? 1 : e);
+        this.prediction = this.brain.predict(inputs).map(e => e > 1 ? 1 : e < -1 ? -1 : e);
 
         this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.3;
         this.carSteering += this.prediction[1] * 0.04;
@@ -200,7 +211,6 @@ class Car extends NEATAgent {
         steer.limit(this.maxforce);
         this.applyForce(steer);
     }
-
 
     render() {
         //angleMode(RADIANS);
@@ -245,4 +255,33 @@ class Car extends NEATAgent {
         pop()
     }
 
+}
+
+const intersection = (position, line2, dir) => {
+    const x1 = line2.a.x;
+    const y1 = line2.a.y;
+    const x2 = line2.b.x;
+    const y2 = line2.b.y;
+
+    const x3 = position.x;
+    const y3 = position.y;
+    const x4 = position.x + dir.x;
+    const y4 = position.y + dir.y;
+
+    const den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+
+    if (den === 0) return;
+
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+    const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
+
+
+    if (t > 0 && t < 1 && u > 0) {
+        let pt = createVector();
+        pt.x = x1 + t * (x2 - x1);
+        pt.y = y1 + t * (y2 - y1);
+        return pt;
+    } else {
+        return;
+    }
 }
