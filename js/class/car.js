@@ -22,20 +22,15 @@ class Car extends NEATAgent {
         this.leftStart = false;
 
         this.avgSpeed = 0;
+        this.drifted = 0;
 
         this.checkpointTimer = 180;
-
-        this.config = {
-            showSightLines: false
-        }
-
-
 
         // CAR MOTION
         this.turnRateStatic = 0.08;
         this.turnRateDynamic = 0.03;
         this.turnRate = this.turnRateStatic;
-        this.gripStatic = 1.5;
+        this.gripStatic = 1.2;
         this.gripDynamic = 0.5;
         this.DRIFT_CONSTANT = 3;
 
@@ -54,7 +49,7 @@ class Car extends NEATAgent {
 
     run() {
         this.update();
-        this.render();
+        //this.render();
     }
 
     update() {
@@ -62,12 +57,11 @@ class Car extends NEATAgent {
         // this.lapCheck();
         this.timeAlive++;
         this.checkpointTimer--;
+
         this.getSiteLines()
 
-        if (this.siteLines.filter(e => e < 10).length) {
-            this.failed = true;
-            this.done = true;
-            this.score *= 0.75;
+        if (this.siteLines.find(e => e < 10)) {
+            this.crashed();
             return;
         }
 
@@ -84,27 +78,28 @@ class Car extends NEATAgent {
                 drifting: this.isDrift(),
             });
 
-            if (this.trail.length > 100) {
+            if (this.trail.length > 200) {
                 this.trail.shift()
             }
         }
-        
+
         if (this.isDrift()) {
-            this.score += 100;
+            this.drifted++;
+            this.score += 2;
+        } else {
+            this.avgSpeed += this.speed;
         }
 
         this.score++;
 
         this.lapTime++;
 
-        this.avgSpeed += this.speed
-
         this.networkPrediction()
         this.updateMotion()
     }
 
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////
+
     getPos() {
         return this.position.copy();
     }
@@ -156,7 +151,6 @@ class Car extends NEATAgent {
 
     }
 
-
     adjustVelocity(accel = this.currentAcceleration) {
         this.acceleration
             .add(
@@ -187,13 +181,11 @@ class Car extends NEATAgent {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
     calculateFitness() {
         this.fitness = this.score;
 
-        this.fitness += this.fitness * ((this.avgSpeed / this.timeAlive) / this.maxspeed);
-        // this.fitness += this.fitness * (this.trail.filter(e => e.drifting).length / this.trail.length);
+        this.fitness += this.fitness * ((this.avgSpeed / (this.timeAlive - this.drifted)) / this.maxspeed);
+        this.fitness += this.fitness * (this.drifted / this.timeAlive);
 
         // let min = Infinity;
         // cars.agents.forEach(e => {
@@ -227,9 +219,15 @@ class Car extends NEATAgent {
                 }
             }
 
-            if (this.config.showSightLines && closest) line(this.position.x, this.position.y, closest.x, closest.y)
             return record;
         })
+    }
+
+    crashed() {
+        this.failed = true;
+        this.done = true;
+        this.score *= 0.75;
+        return;
     }
 
     lapCheck() {

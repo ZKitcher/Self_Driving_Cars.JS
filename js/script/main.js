@@ -57,8 +57,9 @@ const renderText = () => {
         `-25 Track Resolution: <`,
         `Add Track: +`,
         `Remove Track: -`,
-        `Toggle Sight lines: A`,
+        `Show top Agents: A`,
         `Resize canvase to window: C`,
+        `Framerate : ${frameRate().toFixed(0)}`
     ]
     push()
     fill('#FFF')
@@ -85,6 +86,7 @@ function keyPressed() {
     if (key === 's') {
         startingPos.x = mouseX
         startingPos.y = mouseY
+        console.log(`New Startign Position:`, startingPos)
         cars.rerun();
     }
     if (key === 't') {
@@ -110,7 +112,10 @@ function keyPressed() {
         createCanvas(window.innerWidth, window.innerHeight);
     }
     if (key === 'a') {
-        cars.agents.forEach(e => e.config.showSightLines = !e.config.showSightLines);
+        cars.toggleTopAgentsView();
+    }
+    if (key === 'o') {
+        cars.mutateOutputActivation('tanh', 1);
     }
 }
 
