@@ -21,7 +21,7 @@ class Car extends NEATAgent {
         this.bestLap = Infinity;
         this.leftStart = false;
 
-        this.avgSpeed = []
+        this.avgSpeed = 0;
 
         this.checkpointTimer = 180;
 
@@ -78,10 +78,26 @@ class Car extends NEATAgent {
             return;
         }
 
-        if (this.speed > 2) this.score++;
+        if (cars.topAgent) {
+            this.trail.push({
+                position: this.getPos(),
+                drifting: this.isDrift(),
+            });
+
+            if (this.trail.length > 100) {
+                this.trail.shift()
+            }
+        }
+        
+        if (this.isDrift()) {
+            this.score += 100;
+        }
+
+        this.score++;
+
         this.lapTime++;
 
-        this.avgSpeed.push(this.speed)
+        this.avgSpeed += this.speed
 
         this.networkPrediction()
         this.updateMotion()
@@ -111,12 +127,6 @@ class Car extends NEATAgent {
         //         this.angle += this.turnRate;
         //     }
         // }
-
-        this.trail.push({
-            position: this.getPos(),
-            drifting: this.isDrift(),
-        });
-
 
         let vB = this.vectWorldToBody(this.velocity, this.angle);
 
@@ -182,8 +192,8 @@ class Car extends NEATAgent {
     calculateFitness() {
         this.fitness = this.score;
 
-        // this.fitness += this.fitness * (avg(this.avgSpeed) / this.maxspeed);
-        this.fitness += this.fitness * (this.trail.filter(e => e.drifting).length / this.trail.length);
+        this.fitness += this.fitness * ((this.avgSpeed / this.timeAlive) / this.maxspeed);
+        // this.fitness += this.fitness * (this.trail.filter(e => e.drifting).length / this.trail.length);
 
         // let min = Infinity;
         // cars.agents.forEach(e => {
@@ -259,7 +269,9 @@ class Car extends NEATAgent {
 
         this.adjustVelocity(this.prediction[0] * this.currentAcceleration);
 
-        this.angle += (this.prediction[1] * this.turnRate) * (this.prediction[0] < 0 ? 0.3 : 1);
+        if (this.speed > 1.5) {
+            this.angle += (this.prediction[1] * this.turnRate) * (this.prediction[0] < 0 ? 0.3 : 1);
+        }
     }
 
     // applyForce(force) {
