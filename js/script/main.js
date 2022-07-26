@@ -4,6 +4,13 @@ let racetrack;
 let walls;
 let target;
 
+let scoreModes = {
+    speed: 'SPEED',
+    drift: 'DRIFT'
+}
+
+let gameMode = scoreModes.drift;
+
 let startingPos = { x: 150, y: 200 }
 
 const buildWallTree = () => {
@@ -45,6 +52,7 @@ const run = () => {
 
 const renderText = () => {
     const textLabel = [
+        `Game Mode: ${gameMode}`,
         `Evaluate: E`,
         `Restart: Q`,
         `Pause: P`,
@@ -116,6 +124,12 @@ function keyPressed() {
     }
     if (key === 'o') {
         cars.mutateOutputActivation('tanh', 1);
+    }
+    if (key === '1') {
+        gameMode = scoreModes.speed;
+    }
+    if (key === '2') {
+        gameMode = scoreModes.drift;
     }
 }
 

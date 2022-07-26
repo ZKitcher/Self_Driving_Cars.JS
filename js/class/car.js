@@ -53,6 +53,7 @@ class Car extends NEATAgent {
     }
 
     update() {
+        this.timer++;
         if (this.done) return;
         // this.lapCheck();
         this.timeAlive++;
@@ -65,7 +66,7 @@ class Car extends NEATAgent {
             return;
         }
 
-        if (this.speed < 2 && this.timeAlive > 100) {
+        if (this.speed < 1 && this.timeAlive > 100) {
             this.failed = true;
             this.done = true;
             this.score *= 0.5;
@@ -78,18 +79,16 @@ class Car extends NEATAgent {
                 drifting: this.isDrift(),
             });
 
-            if (this.trail.length > 200) {
+            if (this.trail.length > 400) {
                 this.trail.shift()
             }
         }
 
         if (this.isDrift()) {
             this.drifted++;
-            this.score += 2;
-        } else {
-            this.avgSpeed += this.speed;
         }
 
+        this.avgSpeed += this.speed;
         this.score++;
 
         this.lapTime++;
@@ -184,8 +183,16 @@ class Car extends NEATAgent {
     calculateFitness() {
         this.fitness = this.score;
 
-        this.fitness += this.fitness * ((this.avgSpeed / (this.timeAlive - this.drifted)) / this.maxspeed);
-        this.fitness += this.fitness * (this.drifted / this.timeAlive);
+        switch (gameMode){
+            case scoreModes.speed:
+                this.fitness += this.fitness * ((this.avgSpeed / this.timeAlive) / this.maxspeed);
+                break;
+            case scoreModes.drift:
+                this.fitness += this.fitness * (this.drifted * 0.01);
+                break;
+            default:
+                this.fitness;
+        }        
 
         // let min = Infinity;
         // cars.agents.forEach(e => {
@@ -306,6 +313,9 @@ class Car extends NEATAgent {
             rect(10, 43, 50, 10)
 
             text('Turning', 10, 70)
+
+            text(`Drift Score: ${this.drifted}`, 10, 110)
+
             rect(10, 83, 50, 10)
 
             fill(this.prediction[0] > 0 ? 'rgb(0,255,0)' : 'rgb(255,0,0)')
