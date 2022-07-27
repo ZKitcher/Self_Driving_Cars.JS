@@ -283,29 +283,25 @@ class NEATPopulation {
         const epoch = () => {
             tik = 0;
             this.reset();
-            clog('Generation', this.generation, `${(performance.now() - start).toFixed(2)}/ms`);
+            clog('Generation', this.generation, `${(performance.now() - genTimer).toFixed(2)}/ms`);
         }
         targetGeneration = this.generation + targetGeneration;
         this.pause = true;
         let tik = (this.timerCount - this.timer) * 60;
         let limit = this.timerCount * 60;
-        console.time('Fast Forward Completed')
-        let start;
+        const start = performance.now();
+        let genTimer;
         while (this.generation < targetGeneration) {
-            start = performance.now();
+            genTimer = performance.now();
             while (tik < limit) {
-                if (!this.checkDone()) {
-                    for (let i = 0; i < this.popSize; i++) {
-                        this.agents[i].run();
-                    }
-                    tik++;
-                } else {
-                    break;
+                for (let i = 0; i < this.popSize; i++) {
+                    this.agents[i].run();
                 }
+                tik++;
             }
             epoch();
         }
-        console.timeEnd('Fast Forward Completed');
+        clog('Fast Forward Completed', (performance.now() - start).toFixed(2));
         this.pause = false;
         this.rerun()
     }
