@@ -60,10 +60,10 @@ class NEATPopulation {
             for (let i = 0; i < this.popSize; i++) {
                 this.agents[i].run();
                 if (this.TopAgentsView && this.topAgent) {
-                    if (this.agents[i].topAgent || this.agents[i].eliteAgent){
+                    if (this.agents[i].topAgent || this.agents[i].eliteAgent) {
                         this.agents[i].render()
                     }
-                }else{
+                } else {
                     this.agents[i].render()
                 }
             }
@@ -91,9 +91,10 @@ class NEATPopulation {
 
     checkDone() {
         for (let i = 0; i < this.popSize; i++) {
-            if (!this.agents[i].done) return;
+            if (!this.agents[i].done) return false;
         }
         this.reset();
+        return true;
     }
 
     evaluate() {
@@ -276,6 +277,43 @@ class NEATPopulation {
         } else {
             this.renderAgentBrain(this.topAgent)
         }
+    }
+
+    fastForward(targetGeneration = 1) {
+        const epoch = () => {
+            tik = 0;
+            this.reset();
+            clog('Generation', this.generation, `${(performance.now() - start).toFixed(2)}/ms`);
+        }
+
+        targetGeneration = this.generation + targetGeneration;
+        this.pause = true;
+        let tik = (this.timerCount - this.timer) * 60;
+        let limit = this.timerCount * 60;
+
+        console.time('Fast Forward Completed')
+
+        let start;
+
+        while (this.generation < targetGeneration) {
+            start = performance.now();
+            while (tik < limit) {
+                if (!this.checkDone()) {
+                    for (let i = 0; i < this.popSize; i++) {
+                        this.agents[i].run();
+                    }
+                    tik++;
+                } else {
+                    break;
+                }
+            }
+            epoch();
+        }
+
+        console.timeEnd('Fast Forward Completed');
+        this.pause = false;
+        this.rerun()
+
     }
 
     renderAgentBrain(agent, width = 500, height = 400, container = 'svgBrainContainer') {

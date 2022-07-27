@@ -24,8 +24,6 @@ class Car extends NEATAgent {
         this.avgSpeed = 0;
         this.drifted = 0;
 
-        this.checkpointTimer = 180;
-
         // CAR MOTION
         this.turnRateStatic = 0.08;
         this.turnRateDynamic = 0.03;
@@ -53,11 +51,9 @@ class Car extends NEATAgent {
     }
 
     update() {
-        this.timer++;
         if (this.done) return;
         // this.lapCheck();
         this.timeAlive++;
-        this.checkpointTimer--;
 
         this.getSiteLines()
 
@@ -183,7 +179,7 @@ class Car extends NEATAgent {
     calculateFitness() {
         this.fitness = this.score;
 
-        switch (gameMode){
+        switch (gameMode) {
             case scoreModes.speed:
                 this.fitness += this.fitness * ((this.avgSpeed / this.timeAlive) / this.maxspeed);
                 break;
@@ -192,7 +188,7 @@ class Car extends NEATAgent {
                 break;
             default:
                 this.fitness;
-        }        
+        }
 
         // let min = Infinity;
         // cars.agents.forEach(e => {
@@ -210,12 +206,32 @@ class Car extends NEATAgent {
         const points = walls.query(new BoundingBox(this.position.x, this.position.y, 201, 201));
         const dir = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5, PI];
 
-        this.siteLines = dir.map(e => {
+        // this.siteLines = dir.map(e => {
+        //     let record = Infinity;
+        //     let closest = null;
+        //     for (let wall of points) {
+        //         const dir = this.velocity.heading() + e
+        //         const pt = intersection(this.position, wall, p5.Vector.fromAngle(dir === 0 ? 0.00000000001 : dir));
+
+        //         if (pt) {
+        //             const d = p5.Vector.dist(this.position, pt);
+        //             if (d < record) {
+        //                 record = d;
+        //                 closest = pt;
+        //             }
+        //         }
+        //     }
+
+        //     return record;
+        // })
+
+        let res = [];
+        for (let i = 0; i < dir.length; i++) {
             let record = Infinity;
             let closest = null;
             for (let wall of points) {
-                const dir = this.velocity.heading() + e
-                const pt = intersection(this.position, wall, p5.Vector.fromAngle(dir === 0 ? 0.00000000001 : dir));
+                const direction = this.velocity.heading() + dir[i]
+                const pt = intersection(this.position, wall, p5.Vector.fromAngle(direction === 0 ? 0.00000000001 : direction));
 
                 if (pt) {
                     const d = p5.Vector.dist(this.position, pt);
@@ -225,9 +241,10 @@ class Car extends NEATAgent {
                     }
                 }
             }
-
-            return record;
-        })
+            res[i] = record
+        }
+        
+        this.siteLines = res;
     }
 
     crashed() {
@@ -260,7 +277,7 @@ class Car extends NEATAgent {
         inputs.push(this.currentAccel / this.maxspeed)
         inputs.push(this.carSteering / 0.4)
 
-        this.prediction = this.brain.predict(inputs).map(e => e > 1 ? 1 : e < -1 ? -1 : e);
+        this.prediction = this.brain.predict(inputs)//.map(e => e > 1 ? 1 : e < -1 ? -1 : e);
 
         // this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.3;
         // this.carSteering += this.prediction[1] * 0.04;
