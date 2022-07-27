@@ -4,6 +4,13 @@ let racetrack;
 let walls;
 let target;
 
+let scoreModes = {
+    speed: 'SPEED',
+    drift: 'DRIFT'
+}
+
+let gameMode = scoreModes.drift;
+
 let startingPos = { x: 150, y: 200 }
 
 const buildWallTree = () => {
@@ -45,7 +52,8 @@ const run = () => {
 
 const renderText = () => {
     const textLabel = [
-        `Evaluate: R`,
+        `Game Mode: ${gameMode}`,
+        `Evaluate: E`,
         `Restart: Q`,
         `Pause: P`,
         `Draw Brain: B`,
@@ -57,8 +65,9 @@ const renderText = () => {
         `-25 Track Resolution: <`,
         `Add Track: +`,
         `Remove Track: -`,
-        `Toggle Sight lines: A`,
+        `Show top Agents: A`,
         `Resize canvase to window: C`,
+        `Framerate : ${frameRate().toFixed(0)}`
     ]
     push()
     fill('#FFF')
@@ -70,7 +79,7 @@ const renderText = () => {
 
 
 function keyPressed() {
-    if (key === 'r') {
+    if (key === 'e') {
         cars.reset()
     }
     if (key === 'q') {
@@ -85,6 +94,7 @@ function keyPressed() {
     if (key === 's') {
         startingPos.x = mouseX
         startingPos.y = mouseY
+        console.log(`New Startign Position:`, startingPos)
         cars.rerun();
     }
     if (key === 't') {
@@ -110,7 +120,16 @@ function keyPressed() {
         createCanvas(window.innerWidth, window.innerHeight);
     }
     if (key === 'a') {
-        cars.agents.forEach(e => e.config.showSightLines = !e.config.showSightLines);
+        cars.toggleTopAgentsView();
+    }
+    if (key === 'o') {
+        cars.mutateOutputActivation('tanh', 1);
+    }
+    if (key === '1') {
+        gameMode = scoreModes.speed;
+    }
+    if (key === '2') {
+        gameMode = scoreModes.drift;
     }
 }
 

@@ -25,6 +25,8 @@ class NEATPopulation {
         this.eliteAgents = 5;
 
         this.showBrain = true;
+        this.TopAgentsView = false;
+
         this.generateAgentsPool()
 
         if (typeof completedGeneration === 'undefined') {
@@ -54,7 +56,18 @@ class NEATPopulation {
         if (!this.pause) {
             this.runTimer();
             this.checkDone();
-            this.agents.forEach(e => e.run());
+
+            for (let i = 0; i < this.popSize; i++) {
+                this.agents[i].run();
+                if (this.TopAgentsView && this.topAgent) {
+                    if (this.agents[i].topAgent || this.agents[i].eliteAgent){
+                        this.agents[i].render()
+                    }
+                }else{
+                    this.agents[i].render()
+                }
+            }
+
         } else {
             this.agents.forEach(e => e.render());
         }
@@ -77,9 +90,10 @@ class NEATPopulation {
     }
 
     checkDone() {
-        if (this.agents.filter(e => !e.done).length === 0) {
-            this.reset()
+        for (let i = 0; i < this.popSize; i++) {
+            if (!this.agents[i].done) return;
         }
+        this.reset();
     }
 
     evaluate() {
@@ -247,7 +261,11 @@ class NEATPopulation {
     }
 
     togglePause() {
-        this.pause = !this.pause
+        this.pause = !this.pause;
+    }
+
+    toggleTopAgentsView() {
+        this.TopAgentsView = !this.TopAgentsView;
     }
 
     toggleBrainRender() {
