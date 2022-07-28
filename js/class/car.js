@@ -1,26 +1,14 @@
 class Car extends NEATAgent {
     constructor(brain, x = 150, y = 200) {
         super(brain);
-        // this.position = createVector(startingPos.x, startingPos.y);
-        // this.acceleration = createVector(0, 0);
-        // this.velocity = createVector(0, 0);
-
+        this.startingPos = createVector(startingPos.x, startingPos.y);
         this.maxspeed = 10;
-        this.turningRadius = 0.04
-
-        this.startingPos = createVector(startingPos.x, startingPos.y)
-
-        this.currentAccel = 0;
-        this.carSteering = 0;
-
-        this.siteLines = []
+        this.siteLines = [];
         this.timeAlive = 0;
-
         this.laps = 0;
         this.lapTime = 0;
         this.bestLap = Infinity;
         this.leftStart = false;
-
         this.avgSpeed = 0;
         this.drifted = 0;
 
@@ -39,9 +27,7 @@ class Car extends NEATAgent {
         this.mass = 10;
         this.currentAcceleration = 0.15;
         this.isDrifting = false;
-
         this.trail = [];
-
         this.speed = 0;
     }
 
@@ -86,7 +72,6 @@ class Car extends NEATAgent {
 
         this.avgSpeed += this.speed;
         this.score++;
-
         this.lapTime++;
 
         this.networkPrediction()
@@ -98,6 +83,7 @@ class Car extends NEATAgent {
     getPos() {
         return this.position.copy();
     }
+
     isDrift() {
         return this.isDrifting;
     }
@@ -158,20 +144,18 @@ class Car extends NEATAgent {
 
     vectBodyToWorld(vect, ang) {
         let v = vect.copy();
-        let vn = createVector(
+        return createVector(
             v.x * cos(ang) - v.y * sin(ang),
             v.x * sin(ang) + v.y * cos(ang)
         );
-        return vn;
     }
 
     vectWorldToBody(vect, ang) {
         let v = vect.copy();
-        let vn = createVector(
+        return createVector(
             v.x * cos(ang) + v.y * sin(ang),
             v.x * sin(ang) - v.y * cos(ang)
         );
-        return vn;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -205,36 +189,15 @@ class Car extends NEATAgent {
     getSiteLines() {
         const points = walls.query(new BoundingBox(this.position.x, this.position.y, 201, 201));
         const dir = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5, PI];
-
-        // this.siteLines = dir.map(e => {
-        //     let record = Infinity;
-        //     let closest = null;
-        //     for (let wall of points) {
-        //         const dir = this.velocity.heading() + e
-        //         const pt = intersection(this.position, wall, p5.Vector.fromAngle(dir === 0 ? 0.00000000001 : dir));
-
-        //         if (pt) {
-        //             const d = p5.Vector.dist(this.position, pt);
-        //             if (d < record) {
-        //                 record = d;
-        //                 closest = pt;
-        //             }
-        //         }
-        //     }
-
-        //     return record;
-        // })
-
         let res = [];
         for (let i = 0; i < dir.length; i++) {
             let record = Infinity;
             let closest = null;
-            for (let wall of points) {
-                const direction = this.velocity.heading() + dir[i]
-                const pt = intersection(this.position, wall, p5.Vector.fromAngle(direction === 0 ? 0.00000000001 : direction));
-
+            for (let j = 0; j < points.length; j++) {
+                const direction = Math.atan2(this.velocity.y, this.velocity.x) + dir[i]
+                const pt = intersection(this.position, points[j], { x: Math.cos(direction), y: Math.sin(direction) });
                 if (pt) {
-                    const d = p5.Vector.dist(this.position, pt);
+                    const d = Math.sqrt(Math.pow((pt.x - this.position.x), 2) + Math.pow((pt.y - this.position.y), 2))
                     if (d < record) {
                         record = d;
                         closest = pt;
@@ -243,7 +206,6 @@ class Car extends NEATAgent {
             }
             res[i] = record
         }
-        
         this.siteLines = res;
     }
 
@@ -272,15 +234,15 @@ class Car extends NEATAgent {
     }
 
     networkPrediction() {
-        let inputs = this.siteLines.map(e => e > 200 ? 1 : (e / 200))
-        inputs.pop()
-        inputs.push(this.currentAccel / this.maxspeed)
-        inputs.push(this.carSteering / 0.4)
-
-        this.prediction = this.brain.predict(inputs)//.map(e => e > 1 ? 1 : e < -1 ? -1 : e);
-
-        // this.currentAccel += this.prediction[0] > 0 ? this.prediction[0] * 0.1 : this.prediction[0] * 0.3;
-        // this.carSteering += this.prediction[1] * 0.04;
+        let inputs = [];
+        for (let i = 0; i < this.siteLines.length - 1; i++) {
+            inputs[i] = this.siteLines[i] > 200 ? 1 : (this.siteLines[i] / 200);
+        }
+        inputs.push(this.speed / this.maxspeed);
+        inputs.push(this.angle / PI);
+        this.prediction = this.brain.predict(inputs);
+        this.prediction[0] = between(this.prediction[0], -1, 1);
+        this.prediction[1] = between(this.prediction[1], -1, 1);
 
         if (this.prediction[0] < 0 && this.speed === 0) {
             this.failed = true;
@@ -290,34 +252,10 @@ class Car extends NEATAgent {
         }
 
         this.adjustVelocity(this.prediction[0] * this.currentAcceleration);
-
         if (this.speed > 1.5) {
             this.angle += (this.prediction[1] * this.turnRate) * (this.prediction[0] < 0 ? 0.3 : 1);
         }
     }
-
-    // applyForce(force) {
-    //     this.acceleration.add(force);
-    // }
-
-    // gas(heading) {
-    //     let sum = createVector(0, 0);
-    //     let newDir = p5.Vector.fromAngle(heading);
-
-    //     if (this.currentAccel === 0) {
-    //         return;
-    //     }
-
-    //     sum
-    //         .add(newDir)
-    //         .div(1)
-    //         .normalize()
-    //         .mult(this.currentAccel)
-
-    //     let steer = p5.Vector.sub(sum, this.velocity);
-    //     steer.limit(this.maxforce);
-    //     this.applyForce(steer);
-    // }
 
     render() {
 

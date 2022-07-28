@@ -5,5 +5,5 @@
 ✔️ Drifting cars
 - Drift multiplyers for more points for longer drifts.
 - Add track Types. (asphalt, dirt, snow).
-- Improve NEAT loop efficiencies.
-- Add Fast Forward function to speed up generations.
+✔️ Improve NEAT loop efficiencies.
+✔️ Add Fast Forward function to speed up generations.

@@ -22,6 +22,7 @@ class NEATPopulation {
         this.timer = this.timerCount;
 
         this.topAgent = null;
+        this.topFitness = 0;
         this.eliteAgents = 5;
 
         this.showBrain = true;
@@ -112,6 +113,7 @@ class NEATPopulation {
             if (e.fitness < min) min = e.fitness;
         })
 
+        this.topFitness = max;
         this.normaliseFitness(min, max)
         this.getAverageFitness();
         this.fillMatingPool();
@@ -222,8 +224,10 @@ class NEATPopulation {
         if (percentage === undefined) percentage = false;
         this.agents.forEach(e => {
             e.brain.nodes.forEach(f => {
-                if (rand() < (percentage !== false ? percentage : e.brain.mutationRates.activationRate)) {
-                    f.mutateActivation(activation)
+                if (f.output) {
+                    if (rand() < (percentage !== false ? percentage : e.brain.mutationRates.activationRate)) {
+                        f.mutateActivation(activation)
+                    }
                 }
             })
         })
@@ -287,21 +291,19 @@ class NEATPopulation {
         }
         targetGeneration = this.generation + targetGeneration;
         this.pause = true;
-        let tik = (this.timerCount - this.timer) * 60;
+        let tik = 0;
         let limit = this.timerCount * 60;
         const start = performance.now();
         let genTimer;
         while (this.generation < targetGeneration) {
             genTimer = performance.now();
             while (tik < limit) {
-                for (let i = 0; i < this.popSize; i++) {
-                    this.agents[i].run();
-                }
+                for (let i = 0; i < this.popSize; i++) this.agents[i].run();
                 tik++;
             }
             epoch();
         }
-        clog('Fast Forward Completed', (performance.now() - start).toFixed(2));
+        clog('Fast Forward Completed', `${((performance.now() - start) / 1000).toFixed(2)}/s`);
         this.pause = false;
         this.rerun()
     }
@@ -417,6 +419,7 @@ class NEATPopulation {
         push();
         fill(this.styling.fontColour ?? '#000000');
         text(`Generation: ${this.generation}`, 10, 15);
+        text(`Top Fitness: ${this.topFitness.toFixed(2)}`, 100, 15);
         pop();
     }
 }
@@ -448,7 +451,7 @@ class NEATAgent {
             brain = parent2.brain.crossover(parent1.brain);
         }
 
-        brain.mutate(mutationRate)
+        brain.mutate(mutationRate);
         return brain;
     }
 }

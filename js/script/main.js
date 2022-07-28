@@ -9,7 +9,7 @@ let scoreModes = {
     drift: 'DRIFT'
 }
 
-let gameMode = scoreModes.drift;
+let gameMode = scoreModes.speed;
 
 let startingPos = { x: 150, y: 200 }
 
@@ -22,6 +22,7 @@ function setup() {
     buildWallTree()
     racetrack = new RaceTrack();
     cars = new NEATPopulation(Car, 100)
+    cars.mutateOutputActivation('tanh', 0.5)
     cars.styling.fontColour = '#FFF'
 
     // myCar = new Car()
@@ -94,7 +95,7 @@ function keyPressed() {
     if (key === 's') {
         startingPos.x = mouseX
         startingPos.y = mouseY
-        console.log(`New Startign Position:`, startingPos)
+        console.log(`New Starting Position:`, startingPos)
         cars.rerun();
     }
     if (key === 't') {
@@ -137,20 +138,6 @@ function mouseClicked() {
     racetrack.updateMap(mouseX, mouseY)
 }
 
-const completedGeneration = () => {
-    // target = new Target()
-}
+const completedGeneration = () => {}
 
-const createMLObjectBrain = (id) => {
-    return new NEATGenome(9, 2, id);
-
-    // let nn = new NeuralNetwork(9, 2);
-    // nn.addHiddenLayer(12, 'tanH');
-    // nn.addHiddenLayer(6, 'tanH');
-    // nn.addHiddenLayer(3, 'tanH');
-    // nn.makeWeights();
-
-    // nn.learningRate = 0.3
-
-    // return nn;
-}
+const createMLObjectBrain = (id) => new NEATGenome(9, 2, id);

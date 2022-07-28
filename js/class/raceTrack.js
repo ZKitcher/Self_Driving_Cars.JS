@@ -333,7 +333,7 @@ class RaceTrack {
     render() {
         push()
         fill('#FFF')
-        text(`Track Res: ${this.res}`, 100, 15)
+        text(`Track Res: ${this.res}`, 100, 30)
         stroke(255)
         strokeWeight(1)
         walls.getEachItem().forEach(e => {
