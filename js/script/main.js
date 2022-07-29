@@ -31,9 +31,15 @@ function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
     buildWallTree();
     racetrack = new RaceTrack();
-    cars = new NEATPopulation(Car, 100);
-    cars.mutateOutputActivation('tanh', 0.5);
+    cars = new NEATPopulation(Car, 100)
+    cars.mutateOutputActivation('tanh', 0.5)
     cars.styling.fontColour = '#FFF';
+
+    if (width < 1000) {
+        cars.toggleTopAgentsView();
+        cars.fastForward(1);
+        cars.toggleBrainRender();
+    }
 
     // myCar = new Car()
 }
