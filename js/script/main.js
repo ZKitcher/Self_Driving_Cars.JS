@@ -98,7 +98,7 @@ const renderText = () => {
 
 function keyPressed() {
     if (key === 'e') {
-        cars.reset()
+        cars.fastForward(1);
     }
     if (key === 'q') {
         cars.restart()
@@ -145,15 +145,20 @@ function keyPressed() {
     }
     if (key === '1') {
         GAMEMODE = SCORE_MODES.speed;
+        cars.topFitness = 0;
     }
     if (key === '2') {
         GAMEMODE = SCORE_MODES.drift;
+        cars.topFitness = 0;
     }
     if (key === '`') {
         const object = Object.keys(TRACK_TYPE)
         let index = object.findIndex(key => TRACK_TYPE[key] === TRACK) + 1;
         if (index === object.length) index = 0
         TRACK = TRACK_TYPE[object[index]]
+    }
+    if (key === 'n') {
+        cars.nextBest();
     }
 }
 

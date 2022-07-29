@@ -4,7 +4,6 @@ class RaceTrack {
         this.cols = 1 + width / this.res;
         this.rows = 1 + height / this.res;
         this.field = [];
-
         this.generateTrack();
     }
 
@@ -82,8 +81,7 @@ class RaceTrack {
         download(title, res)
     }
 
-    update() {
-    }
+    update() { }
 
     getPremadeTrack() {
         this.clearTrack()

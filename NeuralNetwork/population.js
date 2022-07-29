@@ -258,6 +258,7 @@ class NEATPopulation {
     restart() {
         this.agents = [];
         this.datacollection = [];
+        this.topFitness = 0;
         this.generateAgentsPool();
         this.generation = 1;
         this.rerun();
@@ -289,13 +290,14 @@ class NEATPopulation {
             this.reset();
             clog('Generation', this.generation, `${(performance.now() - genTimer).toFixed(2)}/ms`);
         }
-        targetGeneration = this.generation + targetGeneration;
+        this.rerun();
+        let target = this.generation + targetGeneration;
         this.pause = true;
         let tik = 0;
         let limit = this.timerCount * 60;
         const start = performance.now();
         let genTimer;
-        while (this.generation < targetGeneration) {
+        while (this.generation < target) {
             genTimer = performance.now();
             while (tik < limit) {
                 for (let i = 0; i < this.popSize; i++) this.agents[i].run();
@@ -303,9 +305,24 @@ class NEATPopulation {
             }
             epoch();
         }
-        clog('Fast Forward Completed', `${((performance.now() - start) / 1000).toFixed(2)}/s`);
+        if (targetGeneration !== 1) {
+            clog('Fast Forward Completed', `${((performance.now() - start) / 1000).toFixed(2)}/s`);
+        }
         this.pause = false;
-        this.rerun()
+    }
+
+    nextBest() {
+        const currentBest = this.topFitness;
+        let loops = 0;
+        while (currentBest >= this.topFitness && loops < 100) {
+            loops++;
+            this.fastForward()
+        }
+        if (currentBest < this.topFitness) {
+            clog('Next Top Agent:', loops, 'Generations later.', `+${this.topFitness - currentBest}`);
+        } else {
+            clog('No New Top Agent:', loops, 'Generations later');
+        }
     }
 
     renderAgentBrain(agent, width = 500, height = 400, container = 'svgBrainContainer') {
