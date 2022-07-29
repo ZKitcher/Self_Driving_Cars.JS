@@ -16,8 +16,10 @@ class Car extends NEATAgent {
         this.turnRateStatic = 0.08;
         this.turnRateDynamic = 0.03;
         this.turnRate = this.turnRateStatic;
-        this.gripStatic = 1.2;
-        this.gripDynamic = 0.5;
+        // this.gripStatic = 1.2;
+        // this.gripDynamic = 0.5;
+        this.gripStatic = TRACK;
+        this.gripDynamic = TRACK / 2;
         this.DRIFT_CONSTANT = 3;
 
         this.position = createVector(startingPos.x, startingPos.y);
@@ -25,7 +27,7 @@ class Car extends NEATAgent {
         this.velocity = createVector(0, 0);
         this.angle = -1.56;
         this.mass = 10;
-        this.currentAcceleration = 0.15;
+        this.currentAcceleration = 0.2;
         this.isDrifting = false;
         this.trail = [];
         this.speed = 0;
@@ -55,7 +57,7 @@ class Car extends NEATAgent {
             return;
         }
 
-        if (cars.topAgent) {
+        if (this.topAgent) {
             this.trail.push({
                 position: this.getPos(),
                 drifting: this.isDrift(),
@@ -163,12 +165,12 @@ class Car extends NEATAgent {
     calculateFitness() {
         this.fitness = this.score;
 
-        switch (gameMode) {
-            case scoreModes.speed:
+        switch (GAMEMODE) {
+            case SCORE_MODES.speed:
                 this.fitness += this.fitness * ((this.avgSpeed / this.timeAlive) / this.maxspeed);
                 break;
-            case scoreModes.drift:
-                this.fitness += this.fitness * (this.drifted * 0.01);
+            case SCORE_MODES.drift:
+                this.fitness += this.fitness * (this.drifted * 0.1);
                 break;
             default:
                 this.fitness;
@@ -235,7 +237,7 @@ class Car extends NEATAgent {
 
     networkPrediction() {
         let inputs = [];
-        for (let i = 0; i < this.siteLines.length - 1; i++) {
+        for (let i = 0; i < this.siteLines.length; i++) {
             inputs[i] = this.siteLines[i] > 200 ? 1 : (this.siteLines[i] / 200);
         }
         inputs.push(this.speed / this.maxspeed);
@@ -253,7 +255,7 @@ class Car extends NEATAgent {
 
         this.adjustVelocity(this.prediction[0] * this.currentAcceleration);
         if (this.speed > 1.5) {
-            this.angle += (this.prediction[1] * this.turnRate) * (this.prediction[0] < 0 ? 0.3 : 1);
+            this.angle += this.prediction[1] * this.turnRate;
         }
     }
 

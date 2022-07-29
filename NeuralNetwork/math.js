@@ -15,12 +15,7 @@ const PI = Math.PI;
 const isNumber = x => typeof x === 'number';
 const between = (num, minN, maxN) => Math.min(Math.max(num, minN), maxN);
 const clog = (...arg) => console.log(...arg);
-const boxMuller = () => {
-    let u = 0, v = 0;
-    while (u === 0) u = rand();
-    while (v === 0) v = rand();
-    return Math.sqrt(-1 * log(u)) * cos(1 * PI * v);
-};
+const boxMuller = () => Math.sqrt(-1 * log(rand())) * cos(1 * PI * rand());
 const distanceBetweenPoints = (x1, y1, x2, y2) => sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2))
 const unitVector = (x1, y1, x2, y2, steps, step) => {
     const distance = sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2));

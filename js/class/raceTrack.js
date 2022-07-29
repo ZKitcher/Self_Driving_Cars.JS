@@ -15,9 +15,8 @@ class RaceTrack {
 
     updateMap(x, y) {
         try {
-            let i = 1 + floor(x / this.res);
-            let j = 1 + floor(y / this.res);
-            this.field[i][j] = this.field[i][j] ? 0 : 1;
+            let points = this.getClosestPoint(x, y)
+            this.field[points.col][points.row] = this.field[points.col][points.row] ? 0 : 1;
             this.updateBoundary();
         }
         catch {
@@ -75,7 +74,12 @@ class RaceTrack {
     }
 
     downloadTrack(title = 'RaceTrack') {
-        download(title, JSON.stringify(this.field))
+        let res = JSON.stringify({
+            track: this.field,
+            startingPos: [round(startingPos.x), round(startingPos.y)]
+        })
+        clog(res)
+        download(title, res)
     }
 
     update() {
@@ -330,6 +334,26 @@ class RaceTrack {
         return a * 8 + b * 4 + c * 2 + d * 1
     }
 
+    getClosestPoint(x, y) {
+        let closest = Infinity;
+        let highlightPoint = null
+        for (let i = 0; i < this.cols; i++) {
+            for (let j = 0; j < this.rows; j++) {
+                let d = distanceBetweenPoints(i * this.res, j * this.res, x, y)
+                if (d < closest) {
+                    closest = d;
+                    highlightPoint = {
+                        x: i * this.res,
+                        y: j * this.res,
+                        col: i,
+                        row: j
+                    };
+                }
+            }
+        }
+        return highlightPoint;
+    }
+
     render() {
         push()
         fill('#FFF')
@@ -339,6 +363,14 @@ class RaceTrack {
         walls.getEachItem().forEach(e => {
             line(e.a.x, e.a.y, e.b.x, e.b.y)
         });
+
+        if (
+            mouseX > 50 && mouseX < width - 50 &&
+            mouseY > 50 && mouseY < height - 50
+        ) {
+            let highlight = this.getClosestPoint(mouseX, mouseY)
+            ellipse(highlight.x, highlight.y, 3, 3)
+        }
         pop()
     }
 

@@ -4,12 +4,22 @@ let racetrack;
 let walls;
 let target;
 
-let scoreModes = {
+const SCORE_MODES = {
     speed: 'SPEED',
     drift: 'DRIFT'
 }
 
-let gameMode = scoreModes.speed;
+const TRACK_TYPE = {
+    Asphalt: 1.5,
+    Dirt: 0.75,
+    Snow: 0.4,
+    Ice: 0.2
+}
+
+// let TRACK = TRACK_TYPE.asphalt;
+let TRACK = TRACK_TYPE.Dirt;
+// let GAMEMODE = SCORE_MODES.speed;
+let GAMEMODE = SCORE_MODES.drift;
 
 let startingPos = { x: 150, y: 200 }
 
@@ -19,20 +29,20 @@ const buildWallTree = () => {
 
 function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
-    buildWallTree()
+    buildWallTree();
     racetrack = new RaceTrack();
-    cars = new NEATPopulation(Car, 100)
-    cars.mutateOutputActivation('tanh', 0.5)
-    cars.styling.fontColour = '#FFF'
+    cars = new NEATPopulation(Car, 100);
+    cars.mutateOutputActivation('tanh', 0.5);
+    cars.styling.fontColour = '#FFF';
 
     // myCar = new Car()
 }
 
 function draw() {
-    push()
+    push();
     background(51);
-    pop()
-    run()
+    pop();
+    run();
 }
 
 const run = () => {
@@ -41,19 +51,20 @@ const run = () => {
     racetrack.run();
 
     if (keyIsDown(187)) {
-        racetrack.addToTrack(mouseX, mouseY)
+        racetrack.addToTrack(mouseX, mouseY);
     }
     if (keyIsDown(189)) {
-        racetrack.removeTrack(mouseX, mouseY)
+        racetrack.removeTrack(mouseX, mouseY);
     }
 
     renderText()
-    
+
 }
 
 const renderText = () => {
     const textLabel = [
-        `Game Mode: ${gameMode}`,
+        `Game Mode: ${GAMEMODE}`,
+        `Track Type: ${getObjectKey(TRACK_TYPE, TRACK)}`,
         `Evaluate: E`,
         `Restart: Q`,
         `Pause: P`,
@@ -127,10 +138,16 @@ function keyPressed() {
         cars.mutateOutputActivation('tanh', 1);
     }
     if (key === '1') {
-        gameMode = scoreModes.speed;
+        GAMEMODE = SCORE_MODES.speed;
     }
     if (key === '2') {
-        gameMode = scoreModes.drift;
+        GAMEMODE = SCORE_MODES.drift;
+    }
+    if (key === '`') {
+        const object = Object.keys(TRACK_TYPE)
+        let index = object.findIndex(key => TRACK_TYPE[key] === TRACK) + 1;
+        if (index === object.length) index = 0
+        TRACK = TRACK_TYPE[object[index]]
     }
 }
 
@@ -138,6 +155,8 @@ function mouseClicked() {
     racetrack.updateMap(mouseX, mouseY)
 }
 
-const completedGeneration = () => {}
+const completedGeneration = () => { }
 
-const createMLObjectBrain = (id) => new NEATGenome(9, 2, id);
+const createMLObjectBrain = (id) => new NEATGenome(10, 2, id);
+
+const getObjectKey = (obj, value) => Object.keys(obj).find(key => obj[key] === value);

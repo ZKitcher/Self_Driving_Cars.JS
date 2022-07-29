@@ -125,7 +125,7 @@ class NEATPopulation {
         this.agents = this.agents.map((e, i) => {
             let newChild = this.buildAgent(
                 i < this.eliteAgents + 1 ?
-                    e.brain.clone() :
+                    e.brain.copy() :
                     NEATAgent
                         .crossover(
                             this.selectAgent(),
@@ -244,7 +244,7 @@ class NEATPopulation {
 
     rerun() {
         this.agents = this.agents.map(e => {
-            let newChild = this.buildAgent(e.brain.clone());
+            let newChild = this.buildAgent(e.brain.copy());
             if (e.topAgent) {
                 newChild.topAgent = true;
             } else if (e.eliteAgents) {
@@ -356,7 +356,7 @@ class NEATPopulation {
         });
 
         const nodes = agent.nodes.map(e => {
-            let node = e.clone();
+            let node = e.copy();
             if (node.layer === 0) {
                 node.fixed = true;
                 node.y = height - (height * 0.2);
