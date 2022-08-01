@@ -4,12 +4,43 @@ let racetrack;
 let walls;
 let target;
 
-let scoreModes = {
+const SCORE_MODES = {
     speed: 'SPEED',
     drift: 'DRIFT'
 }
 
-let gameMode = scoreModes.drift;
+const TRACK_TYPE = {
+    Asphalt: 1.5,
+    Dirt: 0.75,
+    Snow: 0.4,
+    Ice: 0.2
+}
+
+const updateGround = () => {
+    switch (TRACK) {
+        case TRACK_TYPE.Asphalt:
+            groundColour = 51;
+            break;
+        case TRACK_TYPE.Dirt:
+            groundColour = [111, 78, 55];
+            break;
+        case TRACK_TYPE.Snow:
+            groundColour = [114, 174, 212];
+            break;
+        case TRACK_TYPE.Ice:
+            groundColour = [165, 200, 236];
+            break;
+        default:
+            groundColour = 51;
+    }
+}
+
+// let TRACK = TRACK_TYPE.asphalt;
+let TRACK = TRACK_TYPE.Dirt;
+let groundColour;
+updateGround()
+// let GAMEMODE = SCORE_MODES.speed;
+let GAMEMODE = SCORE_MODES.drift;
 
 let startingPos = { x: 150, y: 200 }
 
@@ -19,19 +50,26 @@ const buildWallTree = () => {
 
 function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
-    buildWallTree()
+    buildWallTree();
     racetrack = new RaceTrack();
     cars = new NEATPopulation(Car, 100)
-    cars.styling.fontColour = '#FFF'
+    cars.mutateOutputActivation('tanh', 0.5)
+    cars.styling.fontColour = '#FFF';
+
+    if (width < 1000) {
+        cars.toggleTopAgentsView();
+        cars.fastForward(1);
+        cars.toggleBrainRender();
+    }
 
     // myCar = new Car()
 }
 
 function draw() {
-    push()
-    background(51);
-    pop()
-    run()
+    push();
+    background(groundColour);
+    pop();
+    run();
 }
 
 const run = () => {
@@ -40,19 +78,20 @@ const run = () => {
     racetrack.run();
 
     if (keyIsDown(187)) {
-        racetrack.addToTrack(mouseX, mouseY)
+        racetrack.addToTrack(mouseX, mouseY);
     }
     if (keyIsDown(189)) {
-        racetrack.removeTrack(mouseX, mouseY)
+        racetrack.removeTrack(mouseX, mouseY);
     }
 
     renderText()
-    
+
 }
 
 const renderText = () => {
     const textLabel = [
-        `Game Mode: ${gameMode}`,
+        `Game Mode: ${GAMEMODE}`,
+        `Track Type: ${getObjectKey(TRACK_TYPE, TRACK)}`,
         `Evaluate: E`,
         `Restart: Q`,
         `Pause: P`,
@@ -80,7 +119,7 @@ const renderText = () => {
 
 function keyPressed() {
     if (key === 'e') {
-        cars.reset()
+        cars.fastForward(1);
     }
     if (key === 'q') {
         cars.restart()
@@ -94,7 +133,7 @@ function keyPressed() {
     if (key === 's') {
         startingPos.x = mouseX
         startingPos.y = mouseY
-        console.log(`New Startign Position:`, startingPos)
+        console.log(`New Starting Position:`, startingPos)
         cars.rerun();
     }
     if (key === 't') {
@@ -126,10 +165,22 @@ function keyPressed() {
         cars.mutateOutputActivation('tanh', 1);
     }
     if (key === '1') {
-        gameMode = scoreModes.speed;
+        GAMEMODE = SCORE_MODES.speed;
+        cars.topFitness = 0;
     }
     if (key === '2') {
-        gameMode = scoreModes.drift;
+        GAMEMODE = SCORE_MODES.drift;
+        cars.topFitness = 0;
+    }
+    if (key === '`') {
+        const object = Object.keys(TRACK_TYPE)
+        let index = object.findIndex(key => TRACK_TYPE[key] === TRACK) + 1;
+        if (index === object.length) index = 0
+        TRACK = TRACK_TYPE[object[index]]
+        updateGround()
+    }
+    if (key === 'n') {
+        cars.nextBest();
     }
 }
 
@@ -137,20 +188,8 @@ function mouseClicked() {
     racetrack.updateMap(mouseX, mouseY)
 }
 
-const completedGeneration = () => {
-    // target = new Target()
-}
+const completedGeneration = () => { }
 
-const createMLObjectBrain = (id) => {
-    return new NEATGenome(9, 2, id);
+const createMLObjectBrain = (id) => new NEATGenome(10, 2, id);
 
-    // let nn = new NeuralNetwork(9, 2);
-    // nn.addHiddenLayer(12, 'tanH');
-    // nn.addHiddenLayer(6, 'tanH');
-    // nn.addHiddenLayer(3, 'tanH');
-    // nn.makeWeights();
-
-    // nn.learningRate = 0.3
-
-    // return nn;
-}
+const getObjectKey = (obj, value) => Object.keys(obj).find(key => obj[key] === value);

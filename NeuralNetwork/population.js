@@ -22,6 +22,7 @@ class NEATPopulation {
         this.timer = this.timerCount;
 
         this.topAgent = null;
+        this.topFitness = 0;
         this.eliteAgents = 5;
 
         this.showBrain = true;
@@ -60,10 +61,10 @@ class NEATPopulation {
             for (let i = 0; i < this.popSize; i++) {
                 this.agents[i].run();
                 if (this.TopAgentsView && this.topAgent) {
-                    if (this.agents[i].topAgent || this.agents[i].eliteAgent){
+                    if (this.agents[i].topAgent || this.agents[i].eliteAgent) {
                         this.agents[i].render()
                     }
-                }else{
+                } else {
                     this.agents[i].render()
                 }
             }
@@ -91,9 +92,10 @@ class NEATPopulation {
 
     checkDone() {
         for (let i = 0; i < this.popSize; i++) {
-            if (!this.agents[i].done) return;
+            if (!this.agents[i].done) return false;
         }
         this.reset();
+        return true;
     }
 
     evaluate() {
@@ -111,6 +113,7 @@ class NEATPopulation {
             if (e.fitness < min) min = e.fitness;
         })
 
+        this.topFitness = max;
         this.normaliseFitness(min, max)
         this.getAverageFitness();
         this.fillMatingPool();
@@ -122,7 +125,7 @@ class NEATPopulation {
         this.agents = this.agents.map((e, i) => {
             let newChild = this.buildAgent(
                 i < this.eliteAgents + 1 ?
-                    e.brain.clone() :
+                    e.brain.copy() :
                     NEATAgent
                         .crossover(
                             this.selectAgent(),
@@ -221,8 +224,10 @@ class NEATPopulation {
         if (percentage === undefined) percentage = false;
         this.agents.forEach(e => {
             e.brain.nodes.forEach(f => {
-                if (rand() < (percentage !== false ? percentage : e.brain.mutationRates.activationRate)) {
-                    f.mutateActivation(activation)
+                if (f.output) {
+                    if (rand() < (percentage !== false ? percentage : e.brain.mutationRates.activationRate)) {
+                        f.mutateActivation(activation)
+                    }
                 }
             })
         })
@@ -239,7 +244,7 @@ class NEATPopulation {
 
     rerun() {
         this.agents = this.agents.map(e => {
-            let newChild = this.buildAgent(e.brain.clone());
+            let newChild = this.buildAgent(e.brain.copy());
             if (e.topAgent) {
                 newChild.topAgent = true;
             } else if (e.eliteAgents) {
@@ -253,6 +258,7 @@ class NEATPopulation {
     restart() {
         this.agents = [];
         this.datacollection = [];
+        this.topFitness = 0;
         this.generateAgentsPool();
         this.generation = 1;
         this.rerun();
@@ -275,6 +281,47 @@ class NEATPopulation {
             if (element) element.parentNode.removeChild(element);
         } else {
             this.renderAgentBrain(this.topAgent)
+        }
+    }
+
+    fastForward(targetGeneration = 1) {
+        const epoch = () => {
+            tik = 0;
+            this.reset();
+            clog('Generation', this.generation, `${(performance.now() - genTimer).toFixed(2)}/ms`);
+        }
+        this.rerun();
+        let target = this.generation + targetGeneration;
+        this.pause = true;
+        let tik = 0;
+        let limit = this.timerCount * 60;
+        const start = performance.now();
+        let genTimer;
+        while (this.generation < target) {
+            genTimer = performance.now();
+            while (tik < limit) {
+                for (let i = 0; i < this.popSize; i++) this.agents[i].run();
+                tik++;
+            }
+            epoch();
+        }
+        if (targetGeneration !== 1) {
+            clog('Fast Forward Completed', `${((performance.now() - start) / 1000).toFixed(2)}/s`);
+        }
+        this.pause = false;
+    }
+
+    nextBest() {
+        const currentBest = this.topFitness;
+        let loops = 0;
+        while (currentBest >= this.topFitness && loops < 100) {
+            loops++;
+            this.fastForward()
+        }
+        if (currentBest < this.topFitness) {
+            clog('Next Top Agent:', loops, 'Generations later.', `+${this.topFitness - currentBest}`);
+        } else {
+            clog('No New Top Agent:', loops, 'Generations later');
         }
     }
 
@@ -326,7 +373,7 @@ class NEATPopulation {
         });
 
         const nodes = agent.nodes.map(e => {
-            let node = e.clone();
+            let node = e.copy();
             if (node.layer === 0) {
                 node.fixed = true;
                 node.y = height - (height * 0.2);
@@ -389,6 +436,7 @@ class NEATPopulation {
         push();
         fill(this.styling.fontColour ?? '#000000');
         text(`Generation: ${this.generation}`, 10, 15);
+        text(`Top Fitness: ${this.topFitness.toFixed(2)}`, 100, 15);
         pop();
     }
 }
@@ -420,7 +468,7 @@ class NEATAgent {
             brain = parent2.brain.crossover(parent1.brain);
         }
 
-        brain.mutate(mutationRate)
+        brain.mutate(mutationRate);
         return brain;
     }
 }

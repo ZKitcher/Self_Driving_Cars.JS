@@ -716,8 +716,6 @@ class NeuralNetwork {
         download(title, JSON.stringify(this.toJSON()))
     }
 
-    // Neural Evolution
-
     copy() {
         return NeuralNetwork.createFromJSON(this.toJSON());
     }
@@ -785,14 +783,15 @@ class NEATConnection {
         rand() < 0.05 ? this.weight = rand(-1, 1) : this.weight += rand(-magnitude, magnitude);
     }
 
-    clone() {
-        let clone = new NEATConnection(this.fromNode, this.toNode, this.weight);
-        clone.enabled = this.enabled;
-        return clone;
+    copy() {
+        let copy = new NEATConnection(this.fromNode, this.toNode, this.weight);
+        copy.enabled = this.enabled;
+        return copy;
     }
 
     getInnovationNumber() {
-        return (1 / 2) * (this.fromNode.number + this.toNode.number) * (this.fromNode.number + this.toNode.number + 1) + this.toNode.number;
+        let x = this.fromNode.number + this.toNode.number;
+        return 0.5 * x * ++x + this.toNode.number;
     }
 }
 
@@ -800,9 +799,9 @@ class NEATNode {
     constructor(num, lay, isOutput) {
         this.number = num;
         this.layer = lay;
-        this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
         this.bias = rand(-1, 1);
         this.output = isOutput || false;
+        this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
 
         this.inputSum = 0;
         this.outputValue = 0;
@@ -812,15 +811,10 @@ class NEATNode {
     }
 
     engage() {
-        if (this.layer) {
-            this.outputValue = activations[this.activation](this.inputSum + this.bias);
+        if (this.layer !== 0) this.outputValue = activations[this.activation](this.inputSum + this.bias);
+        for (let i = 0; i < this.outputConnections.length; i++) {
+            if (this.outputConnections[i].enabled) this.outputConnections[i].toNode.inputSum += this.outputConnections[i].weight * this.outputValue;
         }
-
-        this.outputConnections.forEach(e => {
-            if (e.enabled) {
-                e.toNode.inputSum += e.weight * this.outputValue;
-            }
-        });
     }
 
     mutateBias(magnitude) {
@@ -832,31 +826,14 @@ class NEATNode {
             this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
         } else if (activations[actFunc] !== undefined) {
             this.activation = actFunc;
-        }else{
+        } else {
             NetworkError.warn(`Provided Activation function "${actFunc}" not listed, assigning random`, 'NEATNode.mutateActivation');
             this.activation = actFuncNames[floor(rand(0, actFuncNames.length))];
         }
     }
 
-    isConnectedTo(node) {
-        if (node.layer === this.layer) {
-            return false;
-        }
 
-        if (node.layer < this.layer) {
-            node.outputConnections.forEach(e => {
-                if (e.toNode == this) return true;
-            });
-        } else {
-            this.outputConnections.forEach(e => {
-                if (e.toNode == node) return true;
-            });
-        }
-
-        return false;
-    }
-
-    clone() {
+    copy() {
         let node = new NEATNode(this.number, this.layer, this.output);
         node.bias = this.bias;
         node.activation = this.activation;
@@ -890,16 +867,24 @@ class NEATGenome {
             }
             for (let i = 0; i < this.inputs; i++) {
                 for (let j = this.inputs; j < this.outputs + this.inputs; j++) {
-                    let weight = rand(-1, 1);
-                    this.connections.push(new NEATConnection(this.nodes[i], this.nodes[j], weight));
+                    this.connections.push(new NEATConnection(this.nodes[i], this.nodes[j], rand(-1, 1)));
                 }
             }
         }
+        this.generateNetwork()
     }
 
     generateNetwork() {
-        this.nodes.forEach(e => e.outputConnections = []);
-        this.connections.forEach(e => e.fromNode.outputConnections.push(e));
+        //this.nodes.forEach(e => e.outputConnections = []);
+        for (let i = 0; i < this.nodes.length; i++) {
+            this.nodes[i].outputConnections = []
+        }
+
+        // this.connections.forEach(e => e.fromNode.outputConnections.push(e));
+        for (let i = 0; i < this.connections.length; i++) {
+            this.connections[i].fromNode.outputConnections.push(this.connections[i])
+        }
+
         this.sortByLayer();
     }
 
@@ -908,19 +893,17 @@ class NEATGenome {
     }
 
     feedForward(inputValues) {
-        this.generateNetwork();
-
-        this.nodes.forEach(e => e.inputSum = 0);
-
-        for (let i = 0; i < this.inputs; i++) {
-            this.nodes[i].outputValue = inputValues[i];
-        }
-
         let result = [];
-        this.nodes.forEach(e => {
-            e.engage();
-            if (e.output) result.push(e.outputValue);
-        });
+        let resIndex = 0;
+        for (let i = 0; i < this.nodes.length; i++) {
+            if (i < this.inputs) this.nodes[i].outputValue = inputValues[i];
+            this.nodes[i].engage();
+            if (this.nodes[i].output) {
+                result[resIndex] = this.nodes[i].outputValue;
+                resIndex++;
+            }
+            this.nodes[i].inputSum = 0;
+        }
         return result;
     }
 
@@ -928,7 +911,7 @@ class NEATGenome {
         let offSpring = new NEATGenome(this.inputs, this.outputs, rand(), true);
 
         for (let i = 0; i < this.nodes.length; i++) {
-            let node = this.nodes[i].clone();
+            let node = this.nodes[i].copy();
             if (node.output) {
                 let partnerNode = partner.nodes[partner.getNode(node.number)];
                 if (rand() > 0.5) {
@@ -936,21 +919,21 @@ class NEATGenome {
                     node.bias = partnerNode.bias;
                 }
             }
-            offSpring.nodes.push(node);
+            offSpring.nodes[i] = node;
         }
 
-        this.connections.forEach(e => {
-            let index = this.commonConnection(e.getInnovationNumber(), partner.connections);
+        for (let i = 0; i < this.connections.length; i++) {
+            let index = this.commonConnection(this.connections[i].getInnovationNumber(), partner.connections);
 
             let conn = index != -1
-                ? rand() > 0.5 ? e.clone() : partner.connections[index].clone()
-                : e.clone();
+                ? rand() > 0.5 ? this.connections[i].copy() : partner.connections[index].copy()
+                : this.connections[i].copy();
 
             conn.fromNode = offSpring.nodes[offSpring.getNode(conn.fromNode.number)];
             conn.toNode = offSpring.nodes[offSpring.getNode(conn.toNode.number)];
 
             if (conn.fromNode && conn.toNode) offSpring.connections.push(conn);
-        })
+        }
 
         let p1 = this.mutationRates;
         let p2 = partner.mutationRates;
@@ -980,6 +963,8 @@ class NEATGenome {
         if (rand() < rates.addNodeRate) this.addNode();
         // ADD Node
         if (rand() < rates.rollMutation) this.rollMutations();
+
+        this.generateNetwork();
     }
 
     rollMutations() {
@@ -1005,9 +990,12 @@ class NEATGenome {
 
         let newNode = new NEATNode(this.nextNode, pickedConnection.fromNode.layer + 1);
 
-        this.nodes.forEach(e => {
-            if (e.layer > pickedConnection.fromNode.layer) e.layer++;
-        });
+        // this.nodes.forEach(e => {
+        //     if (e.layer > pickedConnection.fromNode.layer) e.layer++;
+        // });
+        for (let i = 0; i < this.nodes.length; i++) {
+            if (this.nodes[i].layer > pickedConnection.fromNode.layer) this.nodes[i].layer++;
+        }
 
         let newConnection1 = new NEATConnection(pickedConnection.fromNode, newNode, 1);
         let newConnection2 = new NEATConnection(newNode, pickedConnection.toNode, pickedConnection.weight);
@@ -1058,13 +1046,13 @@ class NEATGenome {
         let maxConnections = 0;
         let nodesPerLayer = [];
 
-        this.nodes.forEach((node) => {
-            if (nodesPerLayer[node.layer] !== undefined) {
-                nodesPerLayer[node.layer]++;
+        for (let i = 0; i < this.nodes.length; i++) {
+            if (nodesPerLayer[this.nodes[i].layer] !== undefined) {
+                nodesPerLayer[this.nodes[i].layer]++;
             } else {
-                nodesPerLayer[node.layer] = 1;
+                nodesPerLayer[this.nodes[i].layer] = 1;
             }
-        });
+        };
 
         for (let i = 0; i < this.layers - 1; i++) {
             for (let j = i + 1; j < this.layers; j++) {
@@ -1079,26 +1067,22 @@ class NEATGenome {
         this.nodes.sort((a, b) => a.layer - b.layer);
     }
 
-    clone() {
-        let clone = new NEATGenome(this.inputs, this.outputs, this.id);
-        clone.mutationRates = this.mutationRates;
-        clone.nodes = [...this.nodes];
-        clone.connections = [...this.connections];
-        return clone;
+    copy() {
+        let copy = new NEATGenome(this.inputs, this.outputs, this.id);
+        copy.mutationRates = this.mutationRates;
+        copy.nodes = this.nodes.slice();
+        copy.connections = this.connections.slice();
+        return copy;
     }
 
     getNode(x) {
         return this.nodes.findIndex(e => e.number === x)
     }
 
-    calculateWeight() {
-        return this.connections.length + this.nodes.length;
-    }
-
     downloadNetwork(title = 'NEAT Genome') {
-        let clone = new NEATGenome(this.inputs, this.outputs, this.id);
-        clone.mutationRates = this.mutationRates;
-        clone.nodes = this.nodes.map(e => {
+        let copy = new NEATGenome(this.inputs, this.outputs, this.id);
+        copy.mutationRates = this.mutationRates;
+        copy.nodes = this.nodes.map(e => {
             return {
                 activation: e.activation,
                 bias: e.bias,
@@ -1111,7 +1095,7 @@ class NEATGenome {
                 outputValue: e.outputValue,
             }
         });
-        clone.connections = this.connections.map(e => {
+        copy.connections = this.connections.map(e => {
             return {
                 enabled: e.enabled,
                 fromNode: e.fromNode.id,
@@ -1119,7 +1103,7 @@ class NEATGenome {
                 weight: e.weight
             }
         });
-        download(title, JSON.stringify(clone))
+        download(title, JSON.stringify(copy))
     }
 
     fromJSON(data) {
@@ -1201,7 +1185,7 @@ class NEATGenome {
         });
 
         const nodes = agent.nodes.map(e => {
-            let node = e.clone();
+            let node = e.copy();
             if (node.layer === 0) {
                 node.fixed = true;
                 node.y = height - (height * 0.2);

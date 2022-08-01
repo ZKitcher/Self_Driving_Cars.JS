@@ -112,9 +112,9 @@ class QuadTree {
         if (!this.boundary.intersects(range)) {
             return;
         } else {
-            for (let p of this.points) {
-                if (range.contains(p)) {
-                    found.push(p.item);
+            for (let i = 0; i < this.points.length; i++) {
+                if (range.contains(this.points[i])) {
+                    found.push(this.points[i].item);
                 }
             }
             if (this.divided) {
@@ -131,8 +131,8 @@ class QuadTree {
         if (!found) {
             found = [];
         }
-        for (let p of this.points) {
-            found.push(p.item);
+        for (let i = 0; i < this.points.length; i++) {
+            found.push(this.points[i].item);
         }
         if (this.divided) {
             this.northwest.getEachItem(found);
@@ -144,8 +144,8 @@ class QuadTree {
     }
 
     runEachItem(...items) {
-        for (let p of this.points) {
-            p.item.run(...items);
+        for (let i = 0; i < this.points.length; i++) {
+            this.points[i].item.run(...items);
         }
         if (this.divided) {
             this.northwest.runEachItem(...items);
