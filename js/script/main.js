@@ -16,8 +16,29 @@ const TRACK_TYPE = {
     Ice: 0.2
 }
 
+const updateGround = () => {
+    switch (TRACK) {
+        case TRACK_TYPE.Asphalt:
+            groundColour = 51;
+            break;
+        case TRACK_TYPE.Dirt:
+            groundColour = [111, 78, 55];
+            break;
+        case TRACK_TYPE.Snow:
+            groundColour = [114, 174, 212];
+            break;
+        case TRACK_TYPE.Ice:
+            groundColour = [165, 200, 236];
+            break;
+        default:
+            groundColour = 51;
+    }
+}
+
 // let TRACK = TRACK_TYPE.asphalt;
 let TRACK = TRACK_TYPE.Dirt;
+let groundColour;
+updateGround()
 // let GAMEMODE = SCORE_MODES.speed;
 let GAMEMODE = SCORE_MODES.drift;
 
@@ -46,7 +67,7 @@ function setup() {
 
 function draw() {
     push();
-    background(51);
+    background(groundColour);
     pop();
     run();
 }
@@ -156,6 +177,7 @@ function keyPressed() {
         let index = object.findIndex(key => TRACK_TYPE[key] === TRACK) + 1;
         if (index === object.length) index = 0
         TRACK = TRACK_TYPE[object[index]]
+        updateGround()
     }
     if (key === 'n') {
         cars.nextBest();
