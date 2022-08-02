@@ -19,16 +19,16 @@ const TRACK_TYPE = {
 const updateGround = () => {
     switch (TRACK) {
         case TRACK_TYPE.Asphalt:
-            groundColour = 51;
+            groundColour = 30;
             break;
         case TRACK_TYPE.Dirt:
-            groundColour = [111, 78, 55];
+            groundColour = [66, 46, 33];
             break;
         case TRACK_TYPE.Snow:
-            groundColour = [114, 174, 212];
+            groundColour = [35, 62, 79];
             break;
         case TRACK_TYPE.Ice:
-            groundColour = [165, 200, 236];
+            groundColour = [56, 92, 90];
             break;
         default:
             groundColour = 51;
