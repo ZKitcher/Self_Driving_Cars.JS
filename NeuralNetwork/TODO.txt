@@ -9,3 +9,5 @@
 ✔️ Add Fast Forward function to speed up generations.
 - 3rd output for car network for handbrake. (drop traction by x value)
 - Adjusts turning angle to rotate off velocity.
+- Add Neural network labels for drawn models.
+✔️ Add lap time bonuses for speed mode.
