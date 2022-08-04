@@ -40,7 +40,7 @@ class Car extends NEATAgent {
 
     update() {
         if (this.done) return;
-        // this.lapCheck();
+        this.lapCheck();
         this.timeAlive++;
 
         this.getSiteLines()
@@ -168,6 +168,9 @@ class Car extends NEATAgent {
         switch (GAMEMODE) {
             case SCORE_MODES.speed:
                 this.fitness += this.fitness * ((this.avgSpeed / this.timeAlive) / this.maxspeed);
+                if(this.bestLap !== Infinity){
+                    this.fitness += this.fitness * ((1 / (this.bestLap / 1000)) * 10);
+                }
                 break;
             case SCORE_MODES.drift:
                 this.fitness += this.fitness * (this.drifted * 0.1);
@@ -175,17 +178,6 @@ class Car extends NEATAgent {
             default:
                 this.fitness;
         }
-
-        // let min = Infinity;
-        // cars.agents.forEach(e => {
-        //     if (e.laps > 0) {
-        //         if (e.bestLap < min) min = e.bestLap;
-        //     }
-        // });
-
-        // if (min !== Infinity && min === this.bestLap) {
-        //     this.fitness += this.fitness * 0.2
-        // }
     }
 
     getSiteLines() {
