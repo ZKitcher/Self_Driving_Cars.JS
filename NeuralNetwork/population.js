@@ -7,7 +7,7 @@ if (!document.getElementById('d3js')) {
 }
 
 class NEATPopulation {
-    constructor(constructor, popSize = 25) {
+    constructor(constructor, popSize = 50) {
         this.popSize = popSize;
         this.agents = [];
         this.matingPool = [];
@@ -20,6 +20,7 @@ class NEATPopulation {
         this.timerEnabled = true;
         this.timerCount = 30;
         this.timer = this.timerCount;
+        this.pause = false;
 
         this.topAgent = null;
         this.topFitness = 0;
@@ -27,40 +28,51 @@ class NEATPopulation {
 
         this.showBrain = true;
         this.TopAgentsView = false;
-
-        this.generateAgentsPool()
-
-        if (typeof completedGeneration === 'undefined') {
-            NetworkError.warn('completedGeneration(topAgent) not set to fire after each generation.', 'MLObject.constructor')
-        }
+        this.error = false;
 
         this.styling = {
             fontColour: null,
         }
 
-        this.pause = false;
+        this.generateAgentsPool();
+
+        if (typeof completedGeneration === 'undefined') {
+            NetworkError.warn('completedGeneration(topAgent) not set to fire after each generation.', 'NEATPopulation.constructor')
+        }
     }
 
     generateAgentsPool() {
         for (let i = 0; i < this.popSize; i++) {
-            this.agents.push(this.buildAgent(i))
+            let agent = this.buildAgent(i);
+            if (agent === false) {
+                return agent;
+            }
+            this.agents.push(agent)
             this.agents[i].brain.generateNetwork();
             this.agents[i].brain.mutate();
         }
     }
 
     buildAgent(...arg) {
-        return new this.constructor(...arg)
+        let newAgent = new this.constructor(...arg)
+        if (typeof newAgent.calculateFitness === 'undefined') {
+            this.error = true;
+            NetworkError.error('calculateFitness() missing on agent.', 'NEATPopulation.buildAgent')
+            return false;
+        }
+        return newAgent
     }
 
     run() {
+        if (this.error) return;
+
         if (!this.pause) {
             this.runTimer();
             this.checkDone();
 
             for (let i = 0; i < this.popSize; i++) {
                 this.agents[i].run();
-                if (this.TopAgentsView && this.topAgent) {
+                if (this.TopAgentsView) {
                     if (this.agents[i].topAgent || this.agents[i].eliteAgent) {
                         this.agents[i].render()
                     }
@@ -143,10 +155,8 @@ class NEATPopulation {
             }
 
             return newChild;
-        })
-
+        });
         this.generation++;
-
         if (typeof completedGeneration !== 'undefined') {
             completedGeneration(this.topAgent)
         }
@@ -291,11 +301,11 @@ class NEATPopulation {
             clog('Generation', this.generation, `${(performance.now() - genTimer).toFixed(2)}/ms`);
         }
         this.rerun();
-        let target = this.generation + targetGeneration;
         this.pause = true;
-        let tik = 0;
-        let limit = this.timerCount * 60;
+        const target = this.generation + targetGeneration;
+        const limit = this.timerCount * 60;
         const start = performance.now();
+        let tik = 0;
         let genTimer;
         while (this.generation < target) {
             genTimer = performance.now();
@@ -306,7 +316,13 @@ class NEATPopulation {
             epoch();
         }
         if (targetGeneration !== 1) {
-            clog('Fast Forward Completed', `${((performance.now() - start) / 1000).toFixed(2)}/s`);
+            let time = ((performance.now() - start) / 1000).toFixed(2)
+            if (time < 60) {
+                time = `${time}/s`
+            } else {
+                time = `${(time / 60).toFixed(2)}/m`
+            }
+            clog('Fast Forward Completed', time);
         }
         this.pause = false;
     }
@@ -353,7 +369,6 @@ class NEATPopulation {
             .attr('width', width)
             .attr('height', height)
             .attr('id', agent.id);
-
 
         let force = d3.layout.force()
             .size([width, height]);

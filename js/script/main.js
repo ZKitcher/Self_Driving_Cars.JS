@@ -35,14 +35,11 @@ const updateGround = () => {
     }
 }
 
-// let TRACK = TRACK_TYPE.asphalt;
-let TRACK = TRACK_TYPE.Dirt;
+let TRACK = TRACK_TYPE.Asphalt;
+let GAMEMODE = SCORE_MODES.speed;
 let groundColour;
-updateGround()
-// let GAMEMODE = SCORE_MODES.speed;
-let GAMEMODE = SCORE_MODES.drift;
-
-let startingPos = { x: 150, y: 200 }
+updateGround();
+let startingPos = { x: null, y: null };
 
 const buildWallTree = () => {
     walls = new QuadTree(new BoundingBox(0, 0, width * 2, height * 2), 10);
@@ -52,8 +49,8 @@ function setup() {
     createCanvas(window.innerWidth, window.innerHeight);
     buildWallTree();
     racetrack = new RaceTrack();
-    cars = new NEATPopulation(Car, 100)
-    cars.mutateOutputActivation('tanh', 0.5)
+    cars = new NEATPopulation(Car, 100);
+    cars.mutateOutputActivation(actFunc.tanh, 0.6);
     cars.styling.fontColour = '#FFF';
 
     if (width < 1000) {
@@ -84,8 +81,7 @@ const run = () => {
         racetrack.removeTrack(mouseX, mouseY);
     }
 
-    renderText()
-
+    renderText();
 }
 
 const renderText = () => {
@@ -107,80 +103,82 @@ const renderText = () => {
         `Show top Agents: A`,
         `Resize canvase to window: C`,
         `Framerate : ${frameRate().toFixed(0)}`
-    ]
-    push()
-    fill('#FFF')
+    ];
+    push();
+    fill('#FFF');
     textLabel.reverse().forEach((e, i) => {
         text(e, 10, height - (13 * (i + 1)));
-    })
-    pop()
+    });
+    pop();
 }
 
-
 function keyPressed() {
-    if (key === 'e') {
-        cars.fastForward(1);
-    }
-    if (key === 'q') {
-        cars.restart()
-    }
-    if (key === 'p') {
-        cars.togglePause()
-    }
-    if (key === 'b') {
-        cars.toggleBrainRender();
-    }
-    if (key === 's') {
-        startingPos.x = mouseX
-        startingPos.y = mouseY
-        console.log(`New Starting Position:`, startingPos)
-        cars.rerun();
-    }
-    if (key === 't') {
-        racetrack.getPremadeTrack()
-        cars.rerun()
-    }
-    if (key === '0') {
-        racetrack.clearTrack()
-    }
-    if (key === '.') {
-        racetrack.upRes()
-        cars.rerun()
-    }
-    if (key === ',') {
-        racetrack.downRes()
-        cars.rerun()
-    }
-    if (key === 'g') {
-        racetrack.generateTrack()
-        cars.rerun()
-    }
-    if (key === 'c') {
-        createCanvas(window.innerWidth, window.innerHeight);
-    }
-    if (key === 'a') {
-        cars.toggleTopAgentsView();
-    }
-    if (key === 'o') {
-        cars.mutateOutputActivation('tanh', 1);
-    }
-    if (key === '1') {
-        GAMEMODE = SCORE_MODES.speed;
-        cars.topFitness = 0;
-    }
-    if (key === '2') {
-        GAMEMODE = SCORE_MODES.drift;
-        cars.topFitness = 0;
-    }
-    if (key === '`') {
-        const object = Object.keys(TRACK_TYPE)
-        let index = object.findIndex(key => TRACK_TYPE[key] === TRACK) + 1;
-        if (index === object.length) index = 0
-        TRACK = TRACK_TYPE[object[index]]
-        updateGround()
-    }
-    if (key === 'n') {
-        cars.nextBest();
+    switch (key) {
+        case 'e':
+            cars.fastForward(1);
+            break;
+        case 'q':
+            cars.restart();
+            cars.mutateOutputActivation(actFunc.tanh, 0.6);
+            break;
+        case 'p':
+            cars.togglePause();
+            break;
+        case 'b':
+            cars.toggleBrainRender();
+            break;
+        case 's':
+            startingPos.x = mouseX;
+            startingPos.y = mouseY;
+            clog(`New Starting Position:`, startingPos);
+            cars.rerun();
+            break;
+        case 't':
+            racetrack.getPremadeTrack();
+            cars.rerun();
+            break;
+        case '0':
+            racetrack.clearTrack();
+            break;
+        case '.':
+            racetrack.upRes();
+            cars.rerun();
+            break;
+        case ',':
+            racetrack.downRes();
+            cars.rerun();
+            break;
+        case 'g':
+            racetrack.generateTrack();
+            cars.rerun();
+            break;
+        case 'c':
+            createCanvas(window.innerWidth, window.innerHeight);
+            break;
+        case 'a':
+            cars.toggleTopAgentsView();
+            break;
+        case 'o':
+            cars.mutateOutputActivation('tanh', 1);
+            break;
+        case '1':
+            GAMEMODE = SCORE_MODES.speed;
+            cars.topFitness = 0;
+            break;
+        case '2':
+            GAMEMODE = SCORE_MODES.drift;
+            cars.topFitness = 0;
+            break;
+        case '`':
+            const object = Object.keys(TRACK_TYPE);
+            let index = object.findIndex(key => TRACK_TYPE[key] === TRACK) + 1;
+            if (index === object.length) index = 0;
+            TRACK = TRACK_TYPE[object[index]];
+            updateGround();
+            break;
+        case 'n':
+            cars.nextBest();
+            break;
     }
 }
 

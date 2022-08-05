@@ -665,6 +665,7 @@ const lossfuncs = {
 
 const activations = {
     sigmoid(x) {
+        // Range 0 to 1, S-curve
         return 1 / (1 + exp(-x));
     },
     sigmoid_d(x) {
@@ -672,6 +673,7 @@ const activations = {
         return x1 * (1 - x1);
     },
     silu(x) {
+        // Sigmoid-weighted Linear Unit
         return x / (1 + exp(-x));
     },
     silu_d(x) {
@@ -680,6 +682,7 @@ const activations = {
         return top / down;
     },
     tanh(x) {
+        // Range -1 to 1, S-curve
         let top = exp(x) - exp(-x);
         let down = exp(x) + exp(-x);
         return top / down;
@@ -690,6 +693,7 @@ const activations = {
         return 1 - numer / denom;
     },
     leakyrelu(x) {
+        // Activation function based on a ReLU, but it has a small slope for negative values instead of a flat slope
         return max(x, x * 0.01);
     },
     leakyrelu_d(x) {
@@ -700,6 +704,7 @@ const activations = {
         }
     },
     relu(x) {
+        // Range 0 to x, Linear
         return max(x, 0);
     },
     relu_d(x) {
@@ -724,6 +729,7 @@ const activations = {
         }
     },
     softsign(x) {
+        // Similar to tanh, -1 to 1, but has a softer slope.
         return x / (1 + abs(x));
     },
     softsign_d(x) {
@@ -731,6 +737,7 @@ const activations = {
         return 1 / (down * down);
     },
     binary(x) {
+        // 0 or 1
         if (x <= 0) {
             return 0;
         } else {
@@ -741,6 +748,7 @@ const activations = {
         return 0;
     },
     softplus(x) {
+        // Smooth version of ReLU.
         return log(1 + exp(x));
     },
     softplus_d(x) {
@@ -769,5 +777,12 @@ const activations = {
     },
     leakysigmoid_d(x) {
         return exp(-x) / pow(exp(-x) + 1, 2) + 1 / 100;
+    },
+    gaussian(x) {
+        // (0,1], bell curve
+        return pow(Math.E, -pow(x, 2));
+    },
+    gaussian_d(x) {
+        return -2 * x * (pow(Math.E, -pow(x, 2)));
     },
 };
