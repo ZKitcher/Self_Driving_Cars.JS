@@ -32,6 +32,7 @@ urlTree.forEach(e => {
     e.endpoint.forEach(endpoint => {
         var script = document.createElement('script')
         script.src = `${e.baseURL}/${endpoint}.${e.extension}`
+        script.defer = true;
         document.head.appendChild(script)
     })
 })
