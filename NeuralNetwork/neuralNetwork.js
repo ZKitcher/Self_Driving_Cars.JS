@@ -457,6 +457,7 @@ class NeuralNetwork {
             }
         })
 
+        generations += this.epoch;
         const start = performance.now();
         for (this.epoch; this.epoch < generations; this.epoch++) {
             dataset.forEach(e => this.backpropagate(e.input, e.target, options))
