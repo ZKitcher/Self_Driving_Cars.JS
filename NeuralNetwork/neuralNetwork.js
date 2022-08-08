@@ -1256,7 +1256,7 @@ const XORDemo = () => {
 
     clog('%cXOR Gate Demo', 'font-size: 2em; font-weight: bold;');
     const nn = new NeuralNetwork(2, 1);
-    nn.addHiddenLayer(6, actFunc.tanH);
+    nn.addHiddenLayer(6, actFunc.tanh);
     nn.outputActivation(actFunc.sigmoid);
     nn.makeWeights();
     clog('%c📉 Before Training', 'padding: 0.2em; font-size: 1.5em; background: #FF6E6E;');
