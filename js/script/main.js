@@ -50,7 +50,7 @@ function setup() {
     buildWallTree();
     racetrack = new RaceTrack();
     cars = new NEATPopulation(Car, 100);
-    cars.mutateOutputActivation(actFunc.tanh, 0.6);
+    cars.mutateOutputActivation(actFunc.tanh, 1);
     cars.styling.fontColour = '#FFF';
 
     if (width < 1000) {
@@ -119,7 +119,7 @@ function keyPressed() {
             break;
         case 'q':
             cars.restart();
-            cars.mutateOutputActivation(actFunc.tanh, 0.6);
+            cars.mutateOutputActivation(actFunc.tanh, 1);
             break;
         case 'p':
             cars.togglePause();
@@ -188,6 +188,6 @@ function mouseClicked() {
 
 const completedGeneration = () => { }
 
-const createMLObjectBrain = (id) => new NEATGenome(10, 2, id);
+const createNEATGenome = (id) => new NEATGenome(10, 2, id);
 
 const getObjectKey = (obj, value) => Object.keys(obj).find(key => obj[key] === value);

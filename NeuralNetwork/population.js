@@ -454,16 +454,88 @@ class NEATPopulation {
         text(`Top Fitness: ${this.topFitness.toFixed(2)}`, 100, 15);
         pop();
     }
+
+    static help() {
+        console.log('%cNEAT Population Guide', 'font-size: 2em; font-weight: bold;');
+        console.log('%cGetting Started', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\t1: Create an agent that extends the NEATAgent class.');
+        console.log('\t2: Give the agent a "calculateFitness()" function.');
+        console.log('\t3: Create a "createNEATGenome()" function to initialise the NEAT Genome.');
+        console.log('\t\tex: const createNEATGenome = (id) => new NEATGenome(input, output, id);');
+        console.log('\t4: Create a new population passing in the agent constructor and population size.');
+        console.log('\t5: ".run()" your agents and NEATpopulation.');
+
+        console.log('\n');
+        console.log('%csetTimer', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: seconds: int / bool');
+        console.log('\tDescription: Set the number of seconds for generations before evaluation.');
+        console.log('\tOverload: Boolean sets enables / disabled the timer component of the population.');
+
+        console.log('\n');
+        console.log('%ctogglePause', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Un/pause the current generation and timer.');
+
+        console.log('\n');
+        console.log('%ctoggleTopAgentsView', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Show/Hide the current generations top /elite agent/s.');
+
+        console.log('\n');
+        console.log('%cfastForward', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: targetGeneration: int');
+        console.log('\tDescription: Quickly evaluate generations in the background until the target generation.');
+
+        console.log('\n');
+        console.log('%cnextBest', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Quickly evaluate generations in the background until the next best agent.');
+
+        console.log('\n');
+        console.log('%cmutateOutputActivation', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: activation: string, percentage: float (0 - 1)');
+        console.log('\tDescription: Mutate the current populations output activation functions by a rate of "percentage" to the chosen function.');
+
+        console.log('\n');
+        console.log('%creset', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Evaluates the current generation at the time of the function call.');
+        
+        console.log('\n');
+        console.log('%crerun', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Restarts the current generation.');
+        
+        console.log('\n');
+        console.log('%crestart', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Reset the current population to generation 0.');
+        
+        console.log('\n');
+        console.log('%ccollectData', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: input : Array, target: Array');
+        console.log('\tDescription: Push the passed inputs and target into an array for a machine learning dataset.');
+        
+        console.log('\n');
+        console.log('%cdownloadDataset', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Download the current stored dataset.');
+        
+        console.log('\n');
+        console.log('%ctoggleBrainRender', 'font-size: 1.5em; font-weight: bold;');
+        console.log('\tParameters: NA');
+        console.log('\tDescription: Show/Hide the rendered top agent model.');
+    }
 }
 
 class NEATAgent {
     constructor(brain) {
         if (brain instanceof NEATGenome) {
             this.brain = brain;
-        } else if (typeof createMLObjectBrain !== 'undefined') {
-            this.brain = createMLObjectBrain(brain);
+        } else if (typeof createNEATGenome !== 'undefined') {
+            this.brain = createNEATGenome(brain);
         } else {
-            NetworkError.error('createMLObjectBrain() needed to create a neural netword for the MLObject.', 'MLObject.constructor');
+            NetworkError.error('createNEATGenome() needed to create a neural netword for the NEATAgent.', 'NEATAgent.constructor');
             return;
         }
         this.failed = false;
