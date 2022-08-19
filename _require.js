@@ -1,0 +1,1 @@
+["src\\classes\\boundary.js","src\\classes\\car.js","src\\classes\\checkpoint.js","src\\classes\\p5Collisions.js","src\\classes\\raceTrack.js","src\\scripts\\index.js","src\\scripts\\initialise.js"].forEach(b=>{var a=document.createElement("script");a.src=b,a.defer=!0,document.head.appendChild(a)})
